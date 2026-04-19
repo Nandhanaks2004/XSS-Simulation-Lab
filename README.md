@@ -98,6 +98,3 @@ All vulnerabilities are simulated using controlled logic and mock data. The appl
 
 Contributions are welcome. Suggestions for improving simulations, adding new scenarios, or enhancing learning flow are encouraged.
 
-## License
-
-Add an appropriate open-source license (such as MIT) if distributing publicly.
